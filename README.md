@@ -29,3 +29,7 @@ Important notes:
   Some of the logic needs to change to allow single file updates outside the context of the initial file list. This has yet to be worked in.
   Alternatively the developer may want to add a feature set that touches several files. This means a new iteration of the initial approach should be performed where the LLM is asked to enumerate
   the files that will be necessary to write or update in order for the new feature to be created. This would then be used to help track and guide it through the iteration.
+
+# Docker
+
+The Dockerfile should build an image capable of running this code and starting a rails server...
