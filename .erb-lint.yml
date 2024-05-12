@@ -1,0 +1,4 @@
+---
+linters:
+  FinalNewline:
+    enabled: false
