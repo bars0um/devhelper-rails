@@ -101,7 +101,7 @@ while True:
     elif "%update" in user_message: 
         logging.info("Stream Manager: Code review and update process, updating code")
         if datastore.state != constants.STATE_COMPLETED_ANALYSIS:
-            print("You must ask assistant to analyze your current project after running the resme directive")
+            print("You must ask assistant to analyze your current project after running the resume directive")
         else:
             analyze_code_message ={"role": "system", "content": "Please write the code for " + datastore.app_files[0] + "\n"
                                                     + messages.how_to_write_code + "\n"  }
