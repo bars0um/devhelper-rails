@@ -9,4 +9,4 @@ done_files=[]
 queue=[]
 
 project_description=""
-
+app_name="myapp"

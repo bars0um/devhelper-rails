@@ -7,6 +7,8 @@ import subprocess
 import utils.constants as constants
 import utils.messages as messages
 import logging
+import sys
+import glob
 
 def extract_app_files(data):
 
@@ -34,7 +36,7 @@ def get_file_path(code):
         str: The extracted file path if found, otherwise raises an exception.
     """
     # Regular expression pattern to match a file path in various comment formats
-    pattern = re.compile(r"^\s*(?:[<!%\-]*)\s*#\s*(/[\w/.\-]+)", re.MULTILINE)
+    pattern = re.compile(r"^\s*(?:[<!%\-]*)\s*#\s*(.*/[\w/.\-]+)", re.MULTILINE)
     # Search through the entire content to find the first valid file path in a comment
     for line in code.splitlines():
         match = pattern.match(line)
@@ -84,15 +86,17 @@ def scan_file(file_path,language):
 
             if "no offenses detected" in result.stdout:
                 return constants.SCAN_SUCCESS
+            else:
+                raise Exception(result.stdout)
 
         except Exception as e:
             # Print the error if rubocop exits with a non-zero status
             logging.info("Scan Failed:")
             #  logging.info(e)
             logging.info("==============")
-            logging.info(e.output)
+            logging.info(repr(e))
             logging.info("==============")
-            return e.output
+            return repr(e)
     elif language == constants.LANGUAGE_HTML or language == constants.LANGUAGE_ERB:
         # Prepare the command to run rubocop
         command = ['erblint', file_path]
@@ -108,15 +112,17 @@ def scan_file(file_path,language):
 
             if "No errors were found" in result.stdout:
                 return constants.SCAN_SUCCESS
+            else:
+                raise Exception(result.stdout)
 
         except Exception as e:
             # Print the error if rubocop exits with a non-zero status
             logging.info("Scan Failed:")
             #  logging.info(e)
             logging.info("==============")
-            logging.info(e.output)
+            logging.info(repr(e))
             logging.info("==============")
-            return e.output
+            return repr(e)
 
 
 def process_response(input_string):
@@ -150,6 +156,7 @@ def process_response(input_string):
 
         logging.info("We will try to parse the input fully and see if that works")
         try:
+            logging.info("code block marker missing...checking entire input for app_files")
             extract_app_files(input_string)
             datastore.state = constants.STATE_APPFILES_DEFINED
             logging.info("Found app_files JSON")
@@ -187,7 +194,8 @@ def process_response(input_string):
    
             if report == constants.SCAN_SUCCESS:
                 print(f'scan succeeded for {file_path}')
-                datastore.app_files.remove(file_path)
+                if file_path in datastore.app_files:
+                    datastore.app_files.remove(file_path)
                 datastore.done_files.append(file_path)
                 
                 logging.info("----Scan Sucess----")
@@ -228,6 +236,42 @@ def process_response(input_string):
 
         else:
             extract_app_files(content)
+            logging.info("attempting to find app_files info inside codeblock")
             datastore.state = constants.STATE_APPFILES_DEFINED
 
     return action
+
+
+
+def read_files(dir_path: str):
+    for path in glob.iglob(f'{dir_path}/**', recursive=True):
+        if path.endswith(('.rb', '.erb', '.html', '.md')):
+            with open(path, 'r') as file:
+                content = file.read()
+                yield path, content 
+
+def fetch_code_blocks(files):
+    code_base = ""
+    for path, content in files:
+        filename = Path(path)
+        code_base+=(f"```\n# {filename}\n{content}```\n")
+    return code_base
+
+def load_description(file_path):
+    if not os.path.isfile(file_path):
+        print(f"{file_path} is not a valid file.")
+        sys.exit(1)
+
+    print("Loading project description...")
+    with open(file_path) as file:
+        content = file.read()
+        return content
+
+def load_code(dir_path):
+    if not os.path.isdir(dir_path):
+        print(f"{dir_path} is not a valid directory.")
+        sys.exit(1)
+
+    print("Loading source code files...")
+    files = read_files(dir_path)
+    return fetch_code_blocks(files)

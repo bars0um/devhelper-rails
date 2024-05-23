@@ -22,6 +22,38 @@ Important notes:
 - once all files have been created, the script pauses and a new phase of the development effort is at hand
   ...(to be continued)
 
+Usage:
+
+```
+python3 -u stream-chat.py
+```
+
+## Starting a new project:
+
+Simply start DevHelper and describe the project or application you want. It will then proceed to list the files that it will write and then write them.
+
+If you have a project description, put it in a file and use the create instruction to make the LLM read it and plan the files to write:
+
+```
+%create /app/myapp/project.md mycoolapp
+```
+
+This should get the LLM to create an app_files json which will then be processed by the script and the LLM will be directed to create each file in sequence.
+
+mycoolapp will be used to replace example texts in the llm instructions to ensure the LLM does not diverge unnecessarily.
+
+## Resuming or modifying an existing project:
+
+start the script and the enter the following:
+
+```
+%resume /app/folder/
+```
+
+This will simply load all the code files in that folder (erb,rb,html) and provide it to the LLM for review.
+
+Next you should describe how you want it to modify the project.
+
 # What's next
 
 - once the initial code is written there are likely tons of changes that you will want to make or possibly additions you want made.
