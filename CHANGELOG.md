@@ -1,3 +1,14 @@
+## 25-05-2023
+
+Bug fixes:
+
+- linter errors were not properly communicated to the LLM
+
+Changes:
+
+- update_queue now holds the files we expect the LLM to update for proper tracking
+- LLM is asked to document every ruby file it writes
+
 ## 23-05-2024
 
 - Resume command receives folder with code, code is stitched together into one large message and provided to LLM for review.

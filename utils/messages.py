@@ -28,8 +28,8 @@ You must use the following app_files format:
 
 ```json
 {    "app_files": [  
-            "/app/myapp/controllers/admin/users_controller.rb", 
-            "/app/myapp/views/admin/users/index.html.erb",
+            "/app/myapp/app/controllers/admin/users_controller.rb", 
+            "/app/myapp/app/views/admin/users/index.html.erb",
             "/app/myapp/db/migrate/create_users.rb",
             "/app/myapp/db/config/initializers/devise.rb",
             ...

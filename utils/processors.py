@@ -13,14 +13,16 @@ import glob
 def extract_app_files(data):
 
     # Parse JSON data
+    plain_data = data
     data = json.loads(data)
     logging.info(f"data: {data} ")
     # Extract file paths from the list and store them in a new list
     if  data["app_files"]:
         datastore.app_files = data["app_files"]
         logging.info(f"app_files extracted: {datastore.app_files}")
-    #  if not file_paths:
-        #  raise ValueError("data not properly formulated, please review and try to fix.")
+        # TODO: check changes to app_files.sjon
+        with open(f"/app/{datastore.app_name}/app_files.json","w") as file:
+            file.write(plain_data)
 
     return datastore.app_files
 
@@ -89,24 +91,25 @@ def scan_file(file_path,language):
             else:
                 raise Exception(result.stdout)
 
-        except Exception as e:
+        except  Exception as e:
             # Print the error if rubocop exits with a non-zero status
             logging.info("Scan Failed:")
-            #  logging.info(e)
             logging.info("==============")
-            logging.info(repr(e))
+            logging.info(e.output)
             logging.info("==============")
-            return repr(e)
+            return e.output
     elif language == constants.LANGUAGE_HTML or language == constants.LANGUAGE_ERB:
         # Prepare the command to run rubocop
         command = ['erblint', file_path]
         
         # Execute the command
         try:
+            logging.info(f"------> calling {command} ")
             # Run the command and capture the output
             result = subprocess.run(command, check=True, text=True, capture_output=True )
+
+            logging.info("-------< call completed")
             # Print the stdout and stderr from rubocop
-            logging.info("-------------------------------")
             logging.info(f"Erblint Output:\n {result.stdout}")
             logging.info("-------------------------------")
 
@@ -115,14 +118,13 @@ def scan_file(file_path,language):
             else:
                 raise Exception(result.stdout)
 
-        except Exception as e:
+        except  Exception as e:
             # Print the error if rubocop exits with a non-zero status
             logging.info("Scan Failed:")
-            #  logging.info(e)
             logging.info("==============")
-            logging.info(repr(e))
+            logging.info(e.output)
             logging.info("==============")
-            return repr(e)
+            return e.output
 
 
 def process_response(input_string):
@@ -157,17 +159,18 @@ def process_response(input_string):
         logging.info("We will try to parse the input fully and see if that works")
         try:
             logging.info("code block marker missing...checking entire input for app_files")
-            extract_app_files(input_string)
+            datastore.update_queue = extract_app_files(input_string)
             datastore.state = constants.STATE_APPFILES_DEFINED
             logging.info("Found app_files JSON")
             action = {
                 "command": constants.ACTION_FOLLOWUP,
                 "message": {
                     "role":"user",
-                    "content": "please only write " + datastore.app_files[0] + " Note: " +  messages.how_to_write_code 
+                    "content": "please only write " + datastore.update_queue[0] + " Note: " +  messages.how_to_write_code 
                     }
             }
-        except:
+        except Exception as e:
+            logging.info(e)
             logging.info("unable to find app_files json")
 
     else:
@@ -186,29 +189,49 @@ def process_response(input_string):
                 file_path = get_file_path(content)
             except:
                 logging.info('no file path was found, using the top file on app_info if it exists')
-                file_path = datastore.app_files[0]
+                # file_path = datastore.update_queue[0]
+                action = {
+                        "command": constants.ACTION_FOLLOWUP,
+                        "message": {
+                            "role":"user",
+                            "content": "No file path was found at the top of the the code block, please only write " + datastore.update_queue[0] \
+                                    + ". Please add descriptive comments in all the code you write."  +  messages.how_to_write_code 
+                            }
+                    }
+                return action
+            
             create_file(file_path,content)
             
-            report = scan_file(file_path,language)
+            # no need to scan if this is a summary file
+            if "md" in file_path:
+                report = constants.SCAN_SUCCESS
+            else:
+                report = scan_file(file_path,language)
 
    
             if report == constants.SCAN_SUCCESS:
                 print(f'scan succeeded for {file_path}')
-                if file_path in datastore.app_files:
-                    datastore.app_files.remove(file_path)
-                datastore.done_files.append(file_path)
+                if file_path in datastore.update_queue:
+                    datastore.update_queue.remove(file_path)
+                datastore.done_queue.append(file_path)
                 
-                logging.info("----Scan Sucess----")
-                logging.info(report)
-                logging.info("----/Scan Sucess/----")
-                
-                if len(datastore.app_files) > 0:
+        #       # have LLM summarize file for resume capability later on
+                if ".rb" in file_path: 
+                    action = {
+                        "command": constants.ACTION_FOLLOWUP,
+                        "message": {
+                            "role":"user",
+                            "content": "please summarize what this file does in a file called " + file_path.split(".")[0] + ".llm.md"
+                            }
+                    }
+
+                elif len(datastore.update_queue) > 0:
                     datastore.state=constants.STATE_COMPLETED_FIRST_ROUND
                     action = {
                         "command": constants.ACTION_FOLLOWUP,
                         "message": {
                             "role":"user",
-                            "content": "please only write " + datastore.app_files[0] #+ " Note: " +  messages.how_to_write_code 
+                            "content": "please only write " + datastore.update_queue[0] + ". Please add descriptive comments in all the code you write." #+ " Note: " +  messages.how_to_write_code 
                             }
                     }
                 else: 
@@ -223,14 +246,14 @@ def process_response(input_string):
             else:
                 print(f'scan failed for {file_path}')
                 logging.info("----Scan Fail----")
-                logging.info(f"datastore file {datastore.app_files[0]}")
+                logging.info(f"datastore file {datastore.update_queue[0]}")
                 logging.info(report)
                 logging.info("----/Scan Fail/----")
                 action = {
                     "command": constants.ACTION_FOLLOWUP,
                     "message": {
                         "role":"user",
-                        "content": "Linter has detected an issue in the code for " + datastore.app_files[0] + " please correct the problem and rewrite the file. Bug report: " + report 
+                        "content": "Linter has detected an issue in the code for " + datastore.update_queue[0] + " please correct the problem and rewrite the file. Bug report: " + report 
                         }
                 }
 
@@ -267,11 +290,30 @@ def load_description(file_path):
         content = file.read()
         return content
 
-def load_code(dir_path):
-    if not os.path.isdir(dir_path):
-        print(f"{dir_path} is not a valid directory.")
-        sys.exit(1)
 
-    print("Loading source code files...")
-    files = read_files(dir_path)
+# read the files from the stored app_files structure
+def read_app_files():
+      with open(f"/app/{datastore.app_name}/app_files.json","r") as file:
+            app_files = file.read()
+            datastore.app_files = json.loads(app_files)
+            for app_file_path in datastore.app_files["app_files"]:
+                with open(app_file_path,"r") as app_file:
+                    content = app_file.read()
+                    yield app_file_path, content 
+
+
+
+def load_code(dir_path):
+
+    # if app_fies exists then read only the files from this structure
+    if os.path.isfile(f"/app/{datastore.app_name}/app_files.json"):
+        files = read_app_files()
+    else:
+        if not os.path.isdir(dir_path):
+            print(f"{dir_path} is not a valid directory.")
+            sys.exit(1)
+
+        print("Loading source code files...")
+        files = read_files(dir_path)
+    
     return fetch_code_blocks(files)

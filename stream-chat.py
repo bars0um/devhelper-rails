@@ -40,11 +40,14 @@ while True:
 
     if "%appinfo" in user_message:
         print(datastore.app_files)
+        print(datastore.update_queue)
+        print(datastore.done_queue)
+
         continue 
 
     if "%appname" in user_message:
-        datastore.project_name = user_message.split(" ")[1]
-        print("project name is now: datastore.project_name this will be used to direct assistant to write files under a folder with this name under /app")
+        datastore.app_name = user_message.split(" ")[1]
+        print("app name is now: datastore.app_name this will be used to direct assistant to write files under a folder with this name under /app")
         messages.customize_app_name(datastore.app_name)
         continue
 
@@ -54,7 +57,7 @@ while True:
             print("Arguments Missing \n Usage: %create /path/to/project/description.md yourappname \n")
             continue
         project_description_file = user_message.split(" ")[1]
-        datastore.project_name = user_message.split(" ")[2]
+        datastore.app_name = user_message.split(" ")[2]
         messages.customize_app_name(datastore.app_name)
         print("resuming ")
         datastore.project_description = load_description(project_description_file)
@@ -64,10 +67,11 @@ while True:
         datastore.state = constants.STATE_CODE_UPDATE
 
 
-    # user can input resume /app/src/folder
+    # user can input resume /app/src/folder app_name
     elif "%resume" in user_message:
         logging.info("Stream Manager: Resuming an already created project with specific project folder provided")
         project_folder = user_message.split(" ")[1]
+        datastore.app_name = user_message.split(" ")[2]
         print("resuming ")
         code = load_code(project_folder)
         datastore.state = constants.STATE_COMPLETED_FIRST_ROUND
@@ -82,7 +86,7 @@ while True:
     
     elif "%write" in user_message:
         logging.info("Stream Manager: Write command, we will proceed assuming app_files is defined and project description has been provided")
-        write_code_message ={"role": "system", "content": "Please write the code for " + datastore.app_files[0] + "\n"
+        write_code_message ={"role": "system", "content": "Please write the code for " + datastore.update_files[0] + "\n"
                                                     + messages.how_to_write_code + "\n"  }
         history.append(write_code_message)
         logging.info(analyze_code_message)
@@ -98,12 +102,18 @@ while True:
         logging.info(analyze_code_message)
         datastore.state = constants.STATE_COMPLETED_ANALYSIS
     
-    elif "%update" in user_message: 
+    elif "%modify" in user_message:
+    # need to allow user to request modification of specific file
+    # also ability to add file to app_files
+        print("modifying file")
+    
+
+    elif "%implement" in user_message: 
         logging.info("Stream Manager: Code review and update process, updating code")
         if datastore.state != constants.STATE_COMPLETED_ANALYSIS:
             print("You must ask assistant to analyze your current project after running the resume directive")
         else:
-            analyze_code_message ={"role": "system", "content": "Please write the code for " + datastore.app_files[0] + "\n"
+            analyze_code_message ={"role": "system", "content": "Please write the code for " + datastore.update_files[0] + "\n"
                                                     + messages.how_to_write_code + "\n"  }
         history.append(analyze_code_message)
         logging.info(analyze_code_message)
