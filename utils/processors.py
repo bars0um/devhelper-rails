@@ -38,7 +38,7 @@ def get_file_path(code):
         str: The extracted file path if found, otherwise raises an exception.
     """
     # Regular expression pattern to match a file path in various comment formats
-    pattern = re.compile(r"^\s*(?:[<!%\-]*)\s*#\s*(.*/[\w/.\-]+)", re.MULTILINE)
+    pattern = re.compile(r"^\s*(?:[<!%\-]*)\s*#*\s*(.*\/[\w\/.\-]+)", re.MULTILINE)
     # Search through the entire content to find the first valid file path in a comment
     for line in code.splitlines():
         match = pattern.match(line)
@@ -95,9 +95,14 @@ def scan_file(file_path,language):
             # Print the error if rubocop exits with a non-zero status
             logging.info("Scan Failed:")
             logging.info("==============")
-            logging.info(e.output)
+            try:
+                logging.info(e.output)
+                error=e.output
+            except AttributeError as ex:
+                logging.info(e)
+                error=repr(e)
             logging.info("==============")
-            return e.output
+            return error
     elif language == constants.LANGUAGE_HTML or language == constants.LANGUAGE_ERB:
         # Prepare the command to run rubocop
         command = ['erblint', file_path]
@@ -187,15 +192,16 @@ def process_response(input_string):
         if language.lower() != "json":
             try:
                 file_path = get_file_path(content)
-            except:
+            except Exception as e:
+                logging.info(e)
                 logging.info('no file path was found, using the top file on app_info if it exists')
                 # file_path = datastore.update_queue[0]
                 action = {
                         "command": constants.ACTION_FOLLOWUP,
                         "message": {
                             "role":"user",
-                            "content": "No file path was found at the top of the the code block, please only write " + datastore.update_queue[0] \
-                                    + ". Please add descriptive comments in all the code you write."  +  messages.how_to_write_code 
+                            "content": "No file path was found at the top of the the code block, please only re-write " + datastore.update_queue[0] \
+                                    + ". Remember to use the correct format for the code block."  
                             }
                     }
                 return action
