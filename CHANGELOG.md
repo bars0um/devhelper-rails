@@ -1,3 +1,13 @@
+## 26-05-2023
+
+Large rewrite...
+
+- use more modules for storing constant names
+- create a specific template format for code to be communicated back from LLM because of hokey behavior with triple tick format
+- history is not sent entirely to LLM, just the last response and the overarching goal of the interaction, the file list and what to do next
+- TODO: updating the resume/update commands to match the new setup. This will require understanding from the user what they want to change, and from the LLM how it proposes to do so. These then need to be somehow maintained across the interactions thereafter as is done with the creation process.
+- some erblint checks disabled to reduce LLM confusion (like html tag termination style)
+
 ## 25-05-2023
 
 Bug fixes:

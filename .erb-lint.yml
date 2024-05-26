@@ -2,3 +2,6 @@
 linters:
   FinalNewline:
     enabled: false
+  SelfClosingTag:
+    enabled: false
+    enforced_style: 'always'

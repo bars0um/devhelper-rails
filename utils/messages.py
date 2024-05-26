@@ -1,15 +1,19 @@
+import utils.markers as markers
+
 def customize_app_name(app_name):
     global app_files_not_defined
     global code_not_found
     global general_system_message
     global define_app_files
     global how_to_write_code
+    global how_to_write_summary
 
     app_files_not_defined = app_files_not_defined.replace("myapp",app_name)
     code_not_found = code_not_found.replace("myapp",app_name)
     general_system_message = general_system_message.replace("myapp",app_name)
     define_app_files = define_app_files.replace("myapp",app_name)
     how_to_write_code = how_to_write_code.replace("myapp",app_name)
+    how_to_write_summary = how_to_write_summary.replace("myapp",app_name)
 
 
 general_system_message ="""
@@ -19,14 +23,13 @@ Users describe an application to you and you implement it for them as fully as y
 Code blocks you write will be processed by a interpreter system that allows you agency. 
 
 Any code you write will be written to a file via the console and any messages communicated back to you from the console.
-```
 """
 define_app_files="""
 Create a listing of the files for the application you are asked to write with the files that need to be created or modified. Provide the listing as a json object that contains the sole attribute "app_files". 
 
-You must use the following app_files format:
+You must use the following template to respond:
 
-```json
+START_APPFILES
 {    "app_files": [  
             "/app/myapp/app/controllers/admin/users_controller.rb", 
             "/app/myapp/app/views/admin/users/index.html.erb",
@@ -35,16 +38,15 @@ You must use the following app_files format:
             ...
             ]
 }
-```
-
+END_APPFILES
 """
 how_to_write_code="""
-When writing code you must use this template:
+When writing the requested file you must use this template:
 
-```<language>
+START_CODE_RESPONSE
 #<filepath>
 <code>
-```
+END_CODE_RESPONSE
 
 where:
 <language> represents the language you are writing the code in
@@ -53,13 +55,15 @@ where:
 
 Here is an example of how you should write files. Please follow these directions strictly.
 
-```ruby
+START_CODE_RESPONSE
 #/app/myapp/services/hello.rb 
 
 puts "hello"
-```
+END_CODE_RESPONSE
+§
+When writing code, write out the full logic, do not put placeholder comments, always implement a file fully.
 
-please only write code, do not write text outside code block and do not add any notes to your responses.
+only write the requested file FILE_PATH 
 """
 
 app_files_not_defined ="""
@@ -67,5 +71,31 @@ You have not defined the app_files inside a JSON code block, please first do so 
 """ + define_app_files
 
 code_not_found ="""
-No code detected in response.
+No code or markdown code block detected in response.
 """ + how_to_write_code
+
+how_to_write_summary ="""
+Please fill the following template exactly, placing the summary in the <PLACEHOLDER> field, remember to put the file path at the top:
+
+START_SUMMARY
+#FILE_PATH
+<PLACEHODLER>
+END_SUMMARY
+"""
+
+define_update_queue="""
+Based on your discussion about the updates necessary. Please first create a list of files that will need to be updated.
+
+You must use the following template to respond:
+
+START_UPDATE_QUEUE
+{    "update_files": [  
+            "/app/myapp/app/controllers/admin/users_controller.rb", 
+            "/app/myapp/app/views/admin/users/index.html.erb",
+            "/app/myapp/db/migrate/create_users.rb",
+            "/app/myapp/db/config/initializers/devise.rb",
+            ...
+            ]
+}
+END_UPDATE_QUEUE
+"""
