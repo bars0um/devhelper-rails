@@ -47,22 +47,16 @@ mycoolapp will be used to replace example texts in the llm instructions to ensur
 start the script and the enter the following:
 
 ```
-%resume /app/folder/
+%resume /app/folder/ mycoolapp
 ```
 
-This will simply load all the code files in that folder (erb,rb,html) and provide it to the LLM for review.
+This will simply load all the code files in that folder (erb,rb,html) (from app_files.json) and provide it to the LLM for review.
 
 ```
-%analyze
+%update _describe your update request here_
 ```
 
-Will instruct LLM to review the contents of a `project_description.md` file that must be present in the project folder and to determine if there are any gaps between the imlemented code and the project description. During this step the LLM needs to re-populate the app_files variable with the files it proposes to update. You can give it additional instructions here to update the app_files accordingly and reshap its plan for the changes that it will perform.
-
-```
-%update
-```
-
-Will instruct the LLM to implement the gaps that it highlights in the analyze stage.
+Will instruct the LLM to explain how it intends to do the change you request. And then guides it through doing that.
 
 # Docker
 
