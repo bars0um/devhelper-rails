@@ -165,12 +165,12 @@ def process_response(input_string):
     elif markers.START_SUMMARY in input_string:
         start_marker = markers.START_SUMMARY
         end_marker = markers.END_SUMMARY
-    elif markers.START_CODE_RESPONSE in input_string:
+    elif markers.START_UPDATE_QUEUE in input_string:
         start_marker = markers.START_UPDATE_QUEUE
         end_marker = markers.END_UPDATE_QUEUE
 
     else: 
-        if datastore.state == constants.STATE_UNINITIALIZED:
+        if datastore.state == states.UNINITIALIZED:
             action = {
                 "command": constants.ACTION_FOLLOWUP,
                 "message": {
@@ -194,7 +194,7 @@ def process_response(input_string):
         #  try:
         #      logging.info("code block marker missing...checking entire input for app_files")
         #      datastore.update_queue = extract_app_files(input_string)
-        #      datastore.state = constants.STATE_APPFILES_DEFINED
+        #      datastore.state = states.APPFILES_DEFINED
         #      logging.info("Found app_files JSON")
         #      action = {
         #          "command": constants.ACTION_FOLLOWUP,
@@ -216,9 +216,9 @@ def process_response(input_string):
         content_end = input_string.find(end_marker, content_start)
         content = input_string[first_new_line + 1:content_end].strip()  # +1 to skip the newline
        
-        if datastore.state == state.PENDING_UPDATE_QUEUE:
+        if datastore.state == states.PENDING_UPDATE_QUEUE:
             datastore.update_queue = extract_update_files(content)
-            logging.info("found app_files moving on")
+            logging.info("found update_files moving on")
             action = {
                     "command": constants.ACTION_FOLLOWUP,
                     "message": {
@@ -227,7 +227,19 @@ def process_response(input_string):
                                 + " \n " + messages.how_to_write_code.replace("FILE_PATH", datastore.update_queue[0] )
                         }
             }
-            datastore.state = constants.STATE_PENDING_CODE_WRITE
+            datastore.state = states.PENDING_CODE_WRITE
+
+        #  if datastore.state == states.PENDING_UPDATE_QUEUE:
+        #      datastore.update_queue = extract_update_files(content)
+        #      logging.info("found app_files moving on")
+        #      action = {
+        #              "command": constants.ACTION_FOLLOWUP,
+        #              "message": {
+        #                  "role":"user",
+        #                  "content": "update_files successfully defined. Please explain what changes you will make to these files"
+        #                  }
+        #      }
+        #      datastore.state = states.PENDING_UPDATE_DESCRIPTION
 
         elif datastore.state != states.UNINITIALIZED:
             try:
@@ -256,7 +268,9 @@ def process_response(input_string):
                 report = constants.SCAN_SUCCESS
             else:
                 report = scan_file(file_path)
-
+            
+            logging.info("scan step completed")
+            logging.info(report)
    
             if report == constants.SCAN_SUCCESS:
                 print(f'scan succeeded for {file_path}')
@@ -264,19 +278,19 @@ def process_response(input_string):
                     datastore.update_queue.remove(file_path)
                 datastore.done_queue.append(file_path)
                 
-        #       # have LLM summarize file for resume capability later on
-                if ".rb" in file_path: 
-                    action = {
-                        "command": constants.ACTION_FOLLOWUP,
-                        "message": {
-                            "role":"user",
-                            "content": "please write a summary of the code you just wrote." + "\n"+ messages.how_to_write_summary.replace("FILE_PATH", file_path.split(".")[0] + ".llm.md")
-                            }
-                    }
-                    datastore.state = constants.STATE_PENDING_SUMMARY_WRITE
+#          #       # have LLM summarize file for resume capability later on
+                #  if ".rb" in file_path: 
+                #      action = {
+                #          "command": constants.ACTION_FOLLOWUP,
+                #          "message": {
+                #              "role":"user",
+                #              "content": "please write a summary of the code you just wrote." + "\n"+ messages.how_to_write_summary.replace("FILE_PATH", file_path.split(".")[0] + ".llm.md")
+                #              }
+                #      }
+                    #  datastore.state = states.PENDING_SUMMARY_WRITE
 
-                elif len(datastore.update_queue) > 0:
-                    datastore.state=constants.STATE_COMPLETED_FIRST_ROUND
+                #el
+                if len(datastore.update_queue) > 0:
                     action = {
                         "command": constants.ACTION_FOLLOWUP,
                         "message": {
@@ -286,7 +300,7 @@ def process_response(input_string):
 
                             }
                     }
-                    datastore.state = constants.STATE_PENDING_CODE_WRITE
+                    datastore.state = states.PENDING_CODE_WRITE
                 else: 
                     action = {
                         "command": constants.ACTION_NOOP,
@@ -315,7 +329,7 @@ def process_response(input_string):
             logging.info("detected json, extracting app_files")
             datastore.update_queue = extract_app_files(content)
             logging.info("found app_files moving on")
-            datastore.state = constants.STATE_APPFILES_DEFINED
+            datastore.state = states.APPFILES_DEFINED
             action = {
                     "command": constants.ACTION_FOLLOWUP,
                     "message": {
@@ -324,7 +338,7 @@ def process_response(input_string):
                                 + " \n " + messages.how_to_write_code.replace("FILE_PATH", datastore.update_queue[0] )
                         }
             }
-            datastore.state = constants.STATE_PENDING_CODE_WRITE
+            datastore.state = states.PENDING_CODE_WRITE
 
     return action
 

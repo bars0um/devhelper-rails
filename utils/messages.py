@@ -5,6 +5,7 @@ def customize_app_name(app_name):
     global code_not_found
     global general_system_message
     global define_app_files
+    global define_update_queue
     global how_to_write_code
     global how_to_write_summary
 
@@ -14,6 +15,7 @@ def customize_app_name(app_name):
     define_app_files = define_app_files.replace("myapp",app_name)
     how_to_write_code = how_to_write_code.replace("myapp",app_name)
     how_to_write_summary = how_to_write_summary.replace("myapp",app_name)
+    define_update_queue = define_update_queue.replace("myapp",app_name)
 
 
 general_system_message ="""
@@ -84,18 +86,20 @@ END_SUMMARY
 """
 
 define_update_queue="""
-Based on your discussion about the updates necessary. Please first create a list of files that will need to be updated.
+Create a list of the files that must be updated to implement the changes requested by the user.
 
-You must use the following template to respond:
-
+Use the following response template: 
 START_UPDATE_QUEUE
-{    "update_files": [  
-            "/app/myapp/app/controllers/admin/users_controller.rb", 
-            "/app/myapp/app/views/admin/users/index.html.erb",
-            "/app/myapp/db/migrate/create_users.rb",
-            "/app/myapp/db/config/initializers/devise.rb",
-            ...
-            ]
+{    
+    "update_files": 
+    [  "/app/myapp/app/controllers/admin/users_controller.rb", 
+        "/app/myapp/app/views/admin/users/index.html.erb",
+        "/app/myapp/db/migrate/create_users.rb",
+        "/app/myapp/db/config/initializers/devise.rb",
+        ...
+    ]
 }
 END_UPDATE_QUEUE
 """
+
+review_complete="REVIEW COMPLETE, READY FOR FURTHER INSTRUCTIONS"

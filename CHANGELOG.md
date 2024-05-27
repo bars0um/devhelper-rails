@@ -1,3 +1,8 @@
+## 27-05-2023
+
+- moved states to states module and made them strings for easy debugging
+- update logic still in the works...user vs system messages is a bit confusing and there is much loopiness in the code, need to modularize and use some sort of state machine to organize the logic. as always, the model itself is what governs the quality of the experience and the nuances of each model are very hard to map out fully...inderterministic behavior causes lots of grief
+
 ## 26-05-2023
 
 Large rewrite...

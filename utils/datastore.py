@@ -1,6 +1,6 @@
-import utils.constants as constants
+import utils.states as states
 
-state=constants.STATE_UNINITIALIZED
+state=states.UNINITIALIZED
 
 # Code files
 app_files=[]
