@@ -1,9 +1,13 @@
-## 27-05-2023
+## 28-05-2024
+
+- rejigged code logic and placed it in main.py. Attempting to modularize and organize the code to fit within a simple but structured overall framework for determining user intent, conveying it to the LLM with the least divergence-causing setup.
+
+## 27-05-2024
 
 - moved states to states module and made them strings for easy debugging
 - update logic still in the works...user vs system messages is a bit confusing and there is much loopiness in the code, need to modularize and use some sort of state machine to organize the logic. as always, the model itself is what governs the quality of the experience and the nuances of each model are very hard to map out fully...inderterministic behavior causes lots of grief
 
-## 26-05-2023
+## 26-05-2024
 
 Large rewrite...
 
@@ -13,7 +17,7 @@ Large rewrite...
 - TODO: updating the resume/update commands to match the new setup. This will require understanding from the user what they want to change, and from the LLM how it proposes to do so. These then need to be somehow maintained across the interactions thereafter as is done with the creation process.
 - some erblint checks disabled to reduce LLM confusion (like html tag termination style)
 
-## 25-05-2023
+## 25-05-2024
 
 Bug fixes:
 

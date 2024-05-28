@@ -1,5 +1,6 @@
 import utils.states as states
 
+last_assistant_message = False
 state=states.UNINITIALIZED
 
 # Code files
