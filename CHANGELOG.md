@@ -1,6 +1,7 @@
 ## 28-05-2024
 
 - rejigged code logic and placed it in main.py. Attempting to modularize and organize the code to fit within a simple but structured overall framework for determining user intent, conveying it to the LLM with the least divergence-causing setup.
+- main.py is a reimplementation of what stream-chat.py has right now but in a more methodical manner...
 
 ## 27-05-2024
 

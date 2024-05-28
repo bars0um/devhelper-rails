@@ -148,6 +148,9 @@ def scan_file(file_path):
             return e.output
 
 
+
+
+
 def process_response(input_string):
 
     action = {
@@ -170,7 +173,7 @@ def process_response(input_string):
         end_marker = markers.END_UPDATE_QUEUE
 
     else: 
-        if datastore.state == states.UNINITIALIZED:
+        if datastore.next_step == states.UNINITIALIZED:
             action = {
                 "command": constants.ACTION_FOLLOWUP,
                 "message": {
@@ -187,14 +190,14 @@ def process_response(input_string):
                     }
                 }
 
-        logging.info(f"State:{datastore.state} \nno code found in response, informing LLM: {action['command']}")
+        logging.info(f"State:{datastore.next_step} \nno code found in response, informing LLM: {action['command']}")
 
  #         logging.info("We will try to parse the input fully and see if that works")
         #  if 
         #  try:
         #      logging.info("code block marker missing...checking entire input for app_files")
         #      datastore.update_queue = extract_app_files(input_string)
-        #      datastore.state = states.APPFILES_DEFINED
+        #      datastore.next_step = states.APPFILES_DEFINED
         #      logging.info("Found app_files JSON")
         #      action = {
         #          "command": constants.ACTION_FOLLOWUP,
@@ -216,7 +219,7 @@ def process_response(input_string):
         content_end = input_string.find(end_marker, content_start)
         content = input_string[first_new_line + 1:content_end].strip()  # +1 to skip the newline
        
-        if datastore.state == states.PENDING_UPDATE_QUEUE:
+        if datastore.next_step == states.PENDING_UPDATE_QUEUE:
             datastore.update_queue = extract_update_files(content)
             logging.info("found update_files moving on")
             action = {
@@ -227,9 +230,9 @@ def process_response(input_string):
                                 + " \n " + messages.how_to_write_code.replace("FILE_PATH", datastore.update_queue[0] )
                         }
             }
-            datastore.state = states.PENDING_CODE_WRITE
+            datastore.next_step = states.PENDING_CODE_WRITE
 
-        #  if datastore.state == states.PENDING_UPDATE_QUEUE:
+        #  if datastore.next_step == states.PENDING_UPDATE_QUEUE:
         #      datastore.update_queue = extract_update_files(content)
         #      logging.info("found app_files moving on")
         #      action = {
@@ -239,9 +242,9 @@ def process_response(input_string):
         #                  "content": "update_files successfully defined. Please explain what changes you will make to these files"
         #                  }
         #      }
-        #      datastore.state = states.PENDING_UPDATE_DESCRIPTION
+        #      datastore.next_step = states.PENDING_UPDATE_DESCRIPTION
 
-        elif datastore.state != states.UNINITIALIZED:
+        elif datastore.next_step != states.UNINITIALIZED:
             try:
                 file_path = get_file_path(content)
                 if start_marker == markers.START_SUMMARY:
@@ -287,7 +290,7 @@ def process_response(input_string):
                 #              "content": "please write a summary of the code you just wrote." + "\n"+ messages.how_to_write_summary.replace("FILE_PATH", file_path.split(".")[0] + ".llm.md")
                 #              }
                 #      }
-                    #  datastore.state = states.PENDING_SUMMARY_WRITE
+                    #  datastore.next_step = states.PENDING_SUMMARY_WRITE
 
                 #el
                 if len(datastore.update_queue) > 0:
@@ -300,7 +303,7 @@ def process_response(input_string):
 
                             }
                     }
-                    datastore.state = states.PENDING_CODE_WRITE
+                    datastore.next_step = states.PENDING_CODE_WRITE
                 else: 
                     action = {
                         "command": constants.ACTION_NOOP,
@@ -329,7 +332,7 @@ def process_response(input_string):
             logging.info("detected json, extracting app_files")
             datastore.update_queue = extract_app_files(content)
             logging.info("found app_files moving on")
-            datastore.state = states.APPFILES_DEFINED
+            datastore.next_step = states.APPFILES_DEFINED
             action = {
                     "command": constants.ACTION_FOLLOWUP,
                     "message": {
@@ -338,7 +341,7 @@ def process_response(input_string):
                                 + " \n " + messages.how_to_write_code.replace("FILE_PATH", datastore.update_queue[0] )
                         }
             }
-            datastore.state = states.PENDING_CODE_WRITE
+            datastore.next_step = states.PENDING_CODE_WRITE
 
     return action
 
