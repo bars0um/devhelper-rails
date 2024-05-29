@@ -25,7 +25,7 @@ Important notes:
 Usage:
 
 ```
-python3 -u stream-chat.py
+python3 -u main.py
 ```
 
 ## Starting a new project:
