@@ -1,3 +1,7 @@
+## 29-05-2024
+
+- completed re-write in main.py, code is cleaner and simpler to follow and extend. Diagrammed in README.md
+
 ## 28-05-2024
 
 - rejigged code logic and placed it in main.py. Attempting to modularize and organize the code to fit within a simple but structured overall framework for determining user intent, conveying it to the LLM with the least divergence-causing setup.
