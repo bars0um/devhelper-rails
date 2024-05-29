@@ -62,21 +62,6 @@ Will instruct the LLM to explain how it intends to do the change you request. An
 
 The Dockerfile should build an image capable of running this code and starting a rails server...
 
-# Further Exploration Plan
-
-So this experiment started out to explore how easy it would be to make a workable useful dev assistant.
-
-The following are some of the challenges I've noted:
-
-- how well your instructions are followed is quite dependent on the model
-- it is not clear to me at the moment how system vs user roles are expected to function. I've noted that some messages are ignored if I choose one role over the other, I am not too aware of the underlying training data and how those to are supposed to play together in the context provided to the LLM.
-- The first version of this code that is somewhat functional, is a bit shallow in that it may not guarantee a full consistency in the output because the context window is kept artificially small and I do not pass on the entire history back to the LLM.
-  - a few remedies come to mind:
-    - define the concept of an epic that contains an overarching goal that the user states (this is basically the %create command but with some more context maintained around the conversation with the LLM.) Here we need to not only maintain the epic's description across the conversation but perhaps also a type of iterator that states where we are within the epic. The main reference point at the moment used is the list of files that the LLM is asked to specify upfront to implement whatever the epic description is. As each file is created, we bump the iterator, keep the epic description and tell the model to create the next file.
-    - obviously some context is missing in that the file it just wrote is now no longer considered when writing the next file...this could potentially result in odd logic, where something was assumed in one file and the next file is written with a reverse assumption that the first file had handled it. Therefore it is important to consider adding a code context window, where we either maintain within the conversation body going back and forths the code written by the LLM for each file...or simply a summary of that code. The reason I think a summary might be better, is because I'm noticing that the more code you put into the conversation, the more the model feel statistically inclined to only address the code and perform what looks like completions and whacky divergence.
-- it is important also to consider resume vs creation logic. These are somewhat disjunct and need to be better managed with a sort of tapered process. I am still working through this logic in my mind.
-- this is now wip in main.py while the older code resides in stream-chat.py
-
 # Logic
 
 The following Mermaid Process Diagram summarizes the current layout of the code.
@@ -131,3 +116,18 @@ stateDiagram-v2
     RECEIVE_RESPONSE --> LLM_FILES_TO_UPDATE
     LLM_FILES_TO_UPDATE --> UPDATE_FILE_QUEUE
 ```
+
+# Further Exploration Plan
+
+So this experiment started out to explore how easy it would be to make a workable useful dev assistant.
+
+The following are some of the challenges I've noted:
+
+- how well your instructions are followed is quite dependent on the model
+- it is not clear to me at the moment how system vs user roles are expected to function. I've noted that some messages are ignored if I choose one role over the other, I am not too aware of the underlying training data and how those to are supposed to play together in the context provided to the LLM.
+- The first version of this code that is somewhat functional, is a bit shallow in that it may not guarantee a full consistency in the output because the context window is kept artificially small and I do not pass on the entire history back to the LLM.
+  - a few remedies come to mind:
+    - define the concept of an epic that contains an overarching goal that the user states (this is basically the %create command but with some more context maintained around the conversation with the LLM.) Here we need to not only maintain the epic's description across the conversation but perhaps also a type of iterator that states where we are within the epic. The main reference point at the moment used is the list of files that the LLM is asked to specify upfront to implement whatever the epic description is. As each file is created, we bump the iterator, keep the epic description and tell the model to create the next file.
+    - obviously some context is missing in that the file it just wrote is now no longer considered when writing the next file...this could potentially result in odd logic, where something was assumed in one file and the next file is written with a reverse assumption that the first file had handled it. Therefore it is important to consider adding a code context window, where we either maintain within the conversation body going back and forths the code written by the LLM for each file...or simply a summary of that code. The reason I think a summary might be better, is because I'm noticing that the more code you put into the conversation, the more the model feel statistically inclined to only address the code and perform what looks like completions and whacky divergence.
+- it is important also to consider resume vs creation logic. These are somewhat disjunct and need to be better managed with a sort of tapered process. I am still working through this logic in my mind. Latest version and diagram see to better manage this..
+- one issue is that I cannot seem to keep the LLM responses sane if I put too much code into the context window...the latest code tries to keep 2 main messages that present the state back to the LLM. The Epic, which describes the project, and the directive, which communicates to the LLM what to do next. If I try to squeeze the entire source code into the epic blob things get totally out of whack.
