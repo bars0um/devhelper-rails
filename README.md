@@ -76,3 +76,11 @@ The following are some of the challenges I've noted:
     - obviously some context is missing in that the file it just wrote is now no longer considered when writing the next file...this could potentially result in odd logic, where something was assumed in one file and the next file is written with a reverse assumption that the first file had handled it. Therefore it is important to consider adding a code context window, where we either maintain within the conversation body going back and forths the code written by the LLM for each file...or simply a summary of that code. The reason I think a summary might be better, is because I'm noticing that the more code you put into the conversation, the more the model feel statistically inclined to only address the code and perform what looks like completions and whacky divergence.
 - it is important also to consider resume vs creation logic. These are somewhat disjunct and need to be better managed with a sort of tapered process. I am still working through this logic in my mind.
 - this is now wip in main.py while the older code resides in stream-chat.py
+
+# Logic
+
+The following Mermaid Process Diagram summarizes the current layout of the code.
+
+```mermaid
+
+```

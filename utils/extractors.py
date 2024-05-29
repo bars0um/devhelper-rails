@@ -90,3 +90,18 @@ def extract_and_save_code_to_filepath_in_comments(input_string):
     create_file(file_path,code)
     
     return file_path
+
+def extract_update_files(data):
+
+    plain_data = extract(markers.START_UPDATE_QUEUE,markers.END_UPDATE_QUEUE,data)
+    # Parse JSON data
+    json_data = json.loads(plain_data)
+    logging.info(f"update files data: {data} ")
+    
+    # Extract file paths from the list and store them in a new list
+    if "update_files" not in json_data:
+        raise Exception("No update files could be extracted")
+        
+    return json_data["update_files"]
+
+

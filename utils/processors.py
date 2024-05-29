@@ -376,12 +376,16 @@ def load_description(file_path):
 def read_app_files():
       with open(f"/app/{datastore.app_name}/app_files.json","r") as file:
             app_files = file.read()
-            datastore.app_files = json.loads(app_files)
-            for app_file_path in datastore.app_files["app_files"]:
-                with open(app_file_path,"r") as app_file:
-                    content = app_file.read()
-                    yield app_file_path, content 
-
+            
+            app_files = json.loads(app_files)["app_files"]
+            if len(app_files) > 0:
+                datastore.app_files = app_files
+                for app_file_path in datastore.app_files:
+                    with open(app_file_path,"r") as app_file:
+                        content = app_file.read()
+                        yield app_file_path, content 
+            else:
+                raise Exception("could not load app_files")
 
 
 def load_code(dir_path):

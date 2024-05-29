@@ -1,13 +1,12 @@
-# Attempt to re-write and organize this code
-# Here we need to think about what the user desire is
-# initially we get a broad 
+# Rails DevHelper
+#
 
 import requests
 import sseclient  # pip install sseclient-py
 import json
 from utils.cli_input import cli_input
 from utils.processors import process_response, load_code, load_description,scan_file
-from utils.extractors import extract_epic_files, extract_and_save_code_to_filepath_in_comments
+from utils.extractors import extract_epic_files, extract_and_save_code_to_filepath_in_comments, extract_update_files
 import utils.datastore as datastore
 import utils.constants as constants
 import logging
@@ -33,14 +32,23 @@ key_message = []
 
 system_message_block = {'role': 'system', 'content':  messages.general_system_message}
 
-def create_instructions():
-    
-    epic_message_block = {}
+def get_epic_message():
+    """
+    updates the epic message with any changes to state that are pertinent to the conversation with the LLM
+    """
     if len(datastore.app_files) > 0:
-        epic_message_block ={"role": "system", "content": "The following is the current project description." \
-                + datastore.epic + "\n the following is a listing of the files for this application: \n" + ','.join(datastore.app_files)
+        app_files = " , ".join(datastore.app_files)
+        return {"role": "system", "content": "The following is the current project description." \
+                + datastore.epic + "\n the following is a listing of the files for this application: \n " + app_files
+                #+ " \n the following is the current code base of this application: \n " + datastore.code ## REMOVED AS THIS CAUSES DIVERGENCE...CONSIDER PUTTING SUMMARIES
                 }
+    else:
+        return { "role": "system", "content": "The following is the current project description." + datastore.epic }
 
+def create_instructions():
+    """
+    Creates the instructions that need to be sent to the LLM depending on the next_step state
+    """
     if datastore.next_step == states.LLM_CREATES_APPFILES:
         create_message ={"role": "system", "content": "The following is the current project description. Please review the description and create a listing of the files necessary to create the application described. \n" \
                 + datastore.epic + "\n" + messages.define_app_files  }  
@@ -57,10 +65,12 @@ def create_instructions():
 
         #TODO: add current code state block here...and then insert it in the returned instructions
         write_code_message= {"role":"user",
-                            "content": "please only write " + datastore.update_queue[0] + ". Please add descriptive comments in all the code you write." \
+                             "content": #"The following is the current project code: " + datastore.code + # REMOVED AS THIS THROWS OFF THE LLM AND CAUSES HUGE DIVERGENCE
+                             " \n please only write " + datastore.update_queue[0] + ". Please add descriptive comments in all the code you write." \
                                     + " Note: " +  messages.how_to_write_code.replace("FILE_PATH", datastore.update_queue[0])}
+        history.append(write_code_message)
+        return [get_epic_message(),write_code_message]
 
-        return [epic_message_block,write_code_message]
     elif datastore.next_step == states.LLM_FIX_BUGGY_FILE:
         with open(datastore.update_queue[0],"r") as buggy_file:
             buggy_code = buggy_file.read()
@@ -72,108 +82,48 @@ def create_instructions():
 
                             }
             datastore.next_step = states.LLM_WRITES_CODE
-            return [epic_message_block,fix_code_error]
-#  def get_next_message_for_llm():
-    #  resume_message = False
-    #  update_code_message = False
-    #  update_description = False
-    #  update_instructions = False
-    #  update_request = False
-    #  send_buffer=[]
-    #  if datastore.next_step == states.UNINITIALIZED and datastore.epic == "":
-    #      print("Input:")
+            history.append(fix_code_error)
+            return [get_epic_message(),fix_code_error]
+
+    elif datastore.next_step == states.LLM_REVIEWS_CURRENT_PROJECT_STATE:
+        print(f"reading project code from {datastore.project_folder}")
+        logging.info("Read project code from {datastore.project_folder}")
+        
+        datastore.code = load_code(datastore.project_folder)
+        
+        with open(datastore.project_folder+"/project.md","r") as project_description_file:
+            datastore.epic = project_description_file.read()
+
+        system_resume_message ={"role": "system", "content": "Review source code provided by user and wait for further instructions. Confirm that you have reviewed the source code by responding: " + messages.review_complete}
+        
+        datastore.next_step = states.LLM_CONFIRMS_REVIEW_OF_CURRENT_PROJECT_STATE #not sure if this is an unnessescary step...
+ 
+
+        return [get_epic_message(),system_resume_message]
+   
+    elif datastore.next_step == states.LLM_EXPLAIN_UPDATE_PLAN:
+        datastore.epic += " \n the following is the user update request: " + datastore.update_directive 
+        update_code_message ={ "role": "system", "content": "Please review user update request. Explain the changes that must be made to fulfill the user update request" }
+        history.append(update_code_message)
+
+        return [get_epic_message(),update_code_message] 
+   
+    elif datastore.next_step == states.LLM_PROVIDES_UPDATE_FILE_QUEUE:
+        datastore.epic += " \n the current target is to achive the following objective: " \
+                + datastore.update_directive + " \n the following is the plan to achieve this objective: \n " \
+                + datastore.update_plan
+        logging.info("asking llm to provide update queue")
+        create_queue_directive={"role":"user","content": messages.define_update_queue }#+ " \n Do this for the user update request: " + update_request["content"] }
     
-    #  if len(datastore.queue) > 0:
-    #      logging.info("action detected...handling adding to send_buffer")
-    #      user_message_block = datastore.queue.pop(0)
-    #      send_buffer.append(user_message_block)
-    #      logging.info(user_message_block)
-    #  else:
-    #      user_message = cli_input("> ")
-    #      user_message_block = {"role": "user", "content": user_message }
-    #      if not "%update" in user_message:
-    #          send_buffer.append(user_message_block)
-        
-    #      if "%appinfo" in user_message:
-    #          print(f"app_files: {datastore.app_files}")
-    #          print(f"update_queue {datastore.update_queue}")
-    #          print(f"done_queue: {datastore.done_queue}")
-            
-    #          return actions.NOOP
+        return[get_epic_message(),create_queue_directive]
 
-    #      if "%appname" in user_message:
-    #          datastore.app_name = user_message.split(" ")[1]
-    #          print("app name is now: datastore.app_name this will be used to direct assistant to write files under a folder with this name under /app")
-    #          messages.customize_app_name(datastore.app_name)
-    #          return actions.NOOP
-        
-    #      if "%update" in user_message:
-    #      # need to allow user to request modification of specific file
-    #      # also ability to add file to app_files
-    #          logging.info("Stream Manager: Code update command detected, asking for update queue list")
-    #          user_message = user_message.replace("%update","")
-    #          if datastore.next_step != states.PENDING_UPDATE_INSTRUCTIONS:
-    #              print("must resume a project first, review logic")
-    #              return actions.NOOP
-    #          else:   
-    #              user_update_message={ "role":"user","content": user_message }
-    #              update_request = user_update_message
-    #              update_code_message ={"role": "system", "content": "Please review user update request. Explain what needs to be done to achieve this." }
-            
-    #              history.append(user_update_message)
-    #              logging.info(user_update_message)
-    #              send_buffer.append(user_update_message)         
-    #              history.append(update_code_message)
-    #              logging.info(update_code_message)
-    #              send_buffer.append(update_code_message)         
-    #              datastore.next_step = states.PENDING_UPDATE_INSTRUCTIONS
-    #              print("modifying files")
-        
-        
-    #      else:
-    #          logging.info("Stream Manager: no specific commands passing block on")
-    #          logging.info(user_message_block)
-    #          history.append(user_message_block)
-    #          send_buffer.append(user_message_block)
-           
-        
-    #  instructions = []
-
-    #  instructions.append(system_message_block)
-
-    #  # add other info
-    #  if len(datastore.app_files) > 0:
-    #      project_state_message_block ={"role": "system", "content": "The following is the current project description." \
-    #              + " Please review the description and create a listing of the files necessary to create the application described. \n" \
-    #              + datastore.epic + "\n the following is a listing of the files for this application: \n" + ','.join(datastore.app_files)
-    #              }
-    #      instructions.append(project_state_message_block)
-
-    #  if resume_message != False and not datastore.next_step == states.RESUME_STARTED:
-    #      instructions.append(resume_message)
-
-    #  if update_request!=False and not update_request in instructions and not update_request in send_buffer:
-    #      instructions.append(update_request)
-
-    #  if update_code_message != False and not datastore.next_step == states.PENDING_UPDATE_QUEUE:
-    #      if not update_code_message in instructions and not update_code_message in send_buffer:
-    #          instructions.append(update_code_message)
-
-    #  if update_instructions != False:
-    #      instructions.append(update_instructions)
-
-    #  if datastore.last_assistant_message !=False:
-    #      if not datastore.last_assistant_message in instructions and not datastore.last_assistant_message in send_buffer:
-    #          instructions.append( datastore.last_assistant_message )
-
-
-    #  instructions += send_buffer
-
-  
-    #  return instructions
-
+    elif datastore.next_step == states.USER_PROVIDES_UPDATE_DETAILS:
+        return actions.NOOP
 
 def send_instructions_to_llm(instructions):
+    """
+        Sends instructions to LLM and collects the response
+    """
     print("INSTRUCTIONS")
     print(instructions)
     print("/INSTRUCTIONS/")
@@ -210,7 +160,9 @@ def send_instructions_to_llm(instructions):
 
 
 def process(response):
-
+    """
+    processes LLM response and bumps state machine along
+    """
     if datastore.next_step == states.LLM_CREATES_APPFILES:
         datastore.app_files = extract_epic_files(response)
         datastore.update_queue = datastore.app_files
@@ -228,6 +180,7 @@ def process(response):
             if code_file in datastore.update_queue:
                 datastore.update_queue.remove(code_file)
             datastore.done_queue.append(code_file)
+            datastore.code += "\n " + response + " \n "
                 
         else:
             print(f'scan failed for {code_file}')
@@ -238,38 +191,27 @@ def process(response):
             datastore.next_step = states.LLM_FIX_BUGGY_FILE
             datastore.last_linter_error = report
 
+    elif datastore.next_step == states.LLM_CONFIRMS_REVIEW_OF_CURRENT_PROJECT_STATE:
+        if messages.review_complete in response:
+            print("LLM confirmed review of project, now please describe update requirements as follows %update my new requirement")
+            datastore.next_step = states.USER_PROVIDES_UPDATE_DETAILS
+        else:
+            print("WARNING: LLM has not conformed to expected response pattern. Continuing, please provide update details as %update details of update")
+            datastore.next_step = states.USER_PROVIDES_UPDATE_DETAILS
 
-    #  if datastore.next_step in [
-    #                          states.UNINITIALIZED,
-    #                          states.PENDING_CODE_WRITE,
-    #                          states.PENDING_SUMMARY_WRITE,
-    #                          states.PENDING_USER_AGREE,
-    #                          states.PENDING_UPDATE_QUEUE
-    #                          ]:
-    #      logging.info(f"datastore.next_step is {datastore.next_step}")
-    #      action = process_response(response)
+    elif datastore.next_step == states.LLM_EXPLAIN_UPDATE_PLAN:
+        datastore.update_plan = response
+        datastore.next_step = states.LLM_PROVIDES_UPDATE_FILE_QUEUE
 
-    #      if action["command"] == constants.ACTION_FOLLOWUP:
-    #          logging.info("Stream Manager: follow-up added to queue\n" )
-    #          logging.info(action["message"])
-
-    #          datastore.queue.append(action["message"])
-    #          #clear the user_message
-    #          user_message=""
-
-    #  if datastore.next_step == states.PENDING_UPDATE_INSTRUCTIONS:
-    #      logging.info("LLM provided update plan")
-    #      update_instructions = datastore.last_assistant_message
-    #      create_queue_directive={"role":"user","content": messages.define_update_queue }#+ " \n Do this for the user update request: " + update_request["content"] }
-    #      datastore.queue.append(create_queue_directive)
-    #      datastore.next_step = states.PENDING_UPDATE_QUEUE
-
-    #  if messages.review_complete in response:
-    #      logging.info("LLM reported review complete")
-        #  datastore.next_step = states.PENDING_UPDATE_INSTRUCTIONS
+    elif datastore.next_step == states.LLM_PROVIDES_UPDATE_FILE_QUEUE:
+        datastore.update_queue = extract_update_files(response)
+        datastore.next_step = states.LLM_WRITES_CODE
 
 
-def get_epic_from_user():
+def get_main_directive_from_user():
+    """
+    gets commands and input from user
+    """
     user_message = cli_input("> ")
 
     if "%create" in user_message:
@@ -288,26 +230,19 @@ def get_epic_from_user():
     # assumption: project.md contains the project description...must update to make this obvious to user
     elif "%resume" in user_message:
         logging.info("Stream Manager: Resuming an already created project with specific project folder provided")
-        project_folder = user_message.split(" ")[1]
+        datastore.project_folder = user_message.split(" ")[1]
         datastore.app_name = user_message.split(" ")[2]
-        print("resuming ")
-        code = load_code(project_folder)
-        with open(project_folder+"/project.md","r") as project_description_file:
-            datastore.epic = project_description_file.read()
+        datastore.next_step = states.LLM_REVIEWS_CURRENT_PROJECT_STATE
+    elif "%update" in user_message:
+        logging.info("Update command detected, asking for update queue list")
+        datastore.update_directive = user_message.replace("%update","")
+        datastore.next_step = states.LLM_EXPLAIN_UPDATE_PLAN
 
-        datastore.next_step = states.RESUME_STARTED
-        resume_message ={"role": "user", "content": "The following is the current project code. Please review the project_description.md file for the project goal."
-                                                    + code + "\n"}  
-        system_resume_message ={"role": "system", "content": "Review source code provided by user and wait for further instructions. Confirm that you have reviewed the source code by responding: " + messages.review_complete}
+    elif "%appinfo" in user_message:
+        print("appfiles: ", datastore.app_files)
+        print("update_queue: ",datastore.update_queue)
+        print("done: ",datastore.done_queue)
 
-        history.append(resume_message)
-        history.append(system_resume_message)
-        logging.info(resume_message)
-        logging.info(system_resume_message)
-    
-        send_buffer.append(resume_message)
-        send_buffer.append(system_resume_message)
-        logging.info(f"datastore.next_step is {datastore.next_step}")
 
 def main():
     
@@ -320,7 +255,8 @@ def main():
           
         * %resume /app/myapp mycoolapp
           note this will look for app_files.json file which was created by the create
-          stage. It will load that code and present it to the LLM
+          stage. It will load that code and present it to the LLM. This assumes that
+          a project.md file describes the application and is found in project root folder
 
         * %update add some cool feature blah blah blah
           this needs to be run after a resume to describe what you want to done to the
@@ -329,7 +265,7 @@ def main():
     )
 
     # determine what epic we will work on today
-    get_epic_from_user()
+    get_main_directive_from_user()
     while True:
 
         logging.info(f"before instruction state: {datastore.next_step}")
@@ -342,6 +278,6 @@ def main():
             response = send_instructions_to_llm(instructions)
             process(response)
         else:
-         get_epic_from_user()
+         get_main_directive_from_user()
 
 main()
