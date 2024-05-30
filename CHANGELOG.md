@@ -1,3 +1,7 @@
+## 30-05-2024
+
+- separated update message from epic and organized better the instruction queue with placeholders that are filtered out if they are set to None...this way we reuse the code writing process for creations and resume/update logic
+
 ## 29-05-2024
 
 - completed re-write in main.py, code is cleaner and simpler to follow and extend. Diagrammed in README.md

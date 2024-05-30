@@ -20,7 +20,6 @@ import utils.markers as markers
 log_format = "%(asctime)s - %(levelname)-5s - %(filename)s:%(lineno)s - %(funcName)s - %(message)s"
 logging.basicConfig(filename='dev-ai-assist.log', filemode='w',level=logging.INFO,format=log_format)
 
-
 url = "http://oobabooga-server:5000/v1/chat/completions"
 
 headers = {
@@ -31,6 +30,21 @@ history = []
 key_message = []
 
 system_message_block = {'role': 'system', 'content':  messages.general_system_message}
+
+def trim_list(mylist):
+    return list(filter(lambda x: x is not None, mylist))
+
+def get_update_directive_message():
+    if len(datastore.update_directive) > 0:
+        return { "role": "user", "content": datastore.update_directive }
+    else: 
+        return None
+
+def get_update_plan_message():                
+    if len(datastore.update_plan) > 0:
+        return { "role": "assistant", "content": datastore.update_plan }
+    else:
+        return None
 
 def get_epic_message():
     """
@@ -69,7 +83,7 @@ def create_instructions():
                              " \n please only write " + datastore.update_queue[0] + ". Please add descriptive comments in all the code you write." \
                                     + " Note: " +  messages.how_to_write_code.replace("FILE_PATH", datastore.update_queue[0])}
         history.append(write_code_message)
-        return [get_epic_message(),write_code_message]
+        return trim_list([get_epic_message(),get_update_directive_message(),get_update_plan_message(),write_code_message])
 
     elif datastore.next_step == states.LLM_FIX_BUGGY_FILE:
         with open(datastore.update_queue[0],"r") as buggy_file:
@@ -78,12 +92,10 @@ def create_instructions():
                             "role":"user",
                             "content": "linter has detected an issue in the code for " + datastore.update_queue[0] + " please correct the problem and rewrite the file. bug report: " + datastore.last_linter_error \
                                     + " \n " + messages.how_to_write_code.replace("file_path", datastore.update_queue[0] ) + " here is the code that requires correction: " \
-                                    + markers.START_CODE_RESPONSE + " \n " + buggy_code + " \n " + markers.END_CODE_RESPONSE
-
-                            }
+                                    + markers.START_CODE_RESPONSE + " \n " + buggy_code + " \n " + markers.END_CODE_RESPONSEmain.py                }
             datastore.next_step = states.LLM_WRITES_CODE
             history.append(fix_code_error)
-            return [get_epic_message(),fix_code_error]
+            return trim_list([get_epic_message(),get_update_directive_message(),get_update_plan_message(),fix_code_error])
 
     elif datastore.next_step == states.LLM_REVIEWS_CURRENT_PROJECT_STATE:
         print(f"reading project code from {datastore.project_folder}")
@@ -102,20 +114,18 @@ def create_instructions():
         return [get_epic_message(),system_resume_message]
    
     elif datastore.next_step == states.LLM_EXPLAIN_UPDATE_PLAN:
-        datastore.epic += " \n the following is the user update request: " + datastore.update_directive 
+        
         update_code_message ={ "role": "system", "content": "Please review user update request. Explain the changes that must be made to fulfill the user update request" }
         history.append(update_code_message)
 
-        return [get_epic_message(),update_code_message] 
+        return trim_list([get_epic_message(),get_update_directive_message(),update_code_message])
    
     elif datastore.next_step == states.LLM_PROVIDES_UPDATE_FILE_QUEUE:
-        datastore.epic += " \n the current target is to achive the following objective: " \
-                + datastore.update_directive + " \n the following is the plan to achieve this objective: \n " \
-                + datastore.update_plan
+
         logging.info("asking llm to provide update queue")
         create_queue_directive={"role":"user","content": messages.define_update_queue }#+ " \n Do this for the user update request: " + update_request["content"] }
     
-        return[get_epic_message(),create_queue_directive]
+        return trim_list([get_epic_message(),get_update_directive_message(),get_update_plan_message(),create_queue_directive])
 
     elif datastore.next_step == states.USER_PROVIDES_UPDATE_DETAILS:
         return actions.NOOP
