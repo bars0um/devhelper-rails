@@ -104,4 +104,14 @@ def extract_update_files(data):
         
     return json_data["update_files"]
 
-
+def extract_task_relevant_files(data):
+    plain_data = extract(markers.READ_FILES,markers.END_READ_FILES,data)
+    # Parse JSON data
+    json_data = json.loads(plain_data)
+    logging.info(f"read files data: {data} ")
+    
+    # Extract file paths from the list and store them in a new list
+    if "task_files" not in json_data:
+        raise Exception("No update files could be extracted")
+        
+    return json_data["task_files"]

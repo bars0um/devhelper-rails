@@ -4,7 +4,7 @@ DevHelper for Ruby on Rails is an open source AI-based development assistant for
 
 This project is inspired by various projects including open-interpreter which astounded me with the numerous possible application of LLMs to various tasks.
 
-This simple chat script assumes that you have oobabooga or an OpenAI compatible API at the end point defined in the url in stream-chat.py.
+This simple chat script assumes that you have oobabooga or an OpenAI compatible API at the end point defined in the url in main.py.
 
 The model I found most simple to work with was the [Nous Hermes II](https://huggingface.co/bartowski/Hermes-2-Pro-Llama-3-8B-exl2/tree/8_0), other models might perform as well.
 
@@ -38,9 +38,8 @@ If you have a project description, put it in a file and use the create instructi
 %create /app/myapp/project.md mycoolapp
 ```
 
-This should get the LLM to create an app_files json which will then be processed by the script and the LLM will be directed to create each file in sequence.
-
-mycoolapp will be used to replace example texts in the llm instructions to ensure the LLM does not diverge unnecessarily.
+- This should get the LLM to create an app_files json which will then be processed by the script and the LLM will be directed to create each file in sequence.
+- mycoolapp will be used to replace example texts in the llm instructions to ensure the LLM does not diverge unnecessarily.
 
 ## Resuming or modifying an existing project:
 
@@ -50,13 +49,19 @@ start the script and the enter the following:
 %resume /app/folder/ mycoolapp
 ```
 
-This will simply load all the code files in that folder (erb,rb,html) (from app_files.json) and provide it to the LLM for review.
+- This will simply load all the code files in that folder (erb,rb,html) (from app_files.json) and provide it to the LLM for review.
 
 ```
 %update _describe your update request here_
 ```
 
-Will instruct the LLM to explain how it intends to do the change you request. And then guides it through doing that.
+- Must be run after a resume command is provided first, this will instruct the LLM to explain how it intends to do the change you request. And then guides it through doing that.
+
+```
+%diagnose _error message_
+```
+
+- Must be run after a resume command is provided first, this will instruct the LLM to diagnose an error by first describing which files it thinks are related to the error. The specified files' contents are loaded and provided to the LLM, after which it is asked to put a plan for fixing the error, and provide a list of files that need to be updated/created to fix the error. After this the logic from the udpate command takes over.
 
 # Docker
 
@@ -115,6 +120,15 @@ stateDiagram-v2
     SEND_REQEUEST_FOR_FILE_UPDATE_QUEU --> SEND_TO_LLM
     RECEIVE_RESPONSE --> LLM_FILES_TO_UPDATE
     LLM_FILES_TO_UPDATE --> UPDATE_FILE_QUEUE
+    DIAGNOSE --> CREATE_INSTRUCTIONS
+    CREATE_INSTRUCTIONS --> ASK_LLM_TO_LIST_ERROR_RELATED_FILES
+    ASK_LLM_TO_LIST_ERROR_RELATED_FILES --> SEND_REQUEST_FOR_ERROR_RELATED_FILES
+    SEND_REQUEST_FOR_ERROR_RELATED_FILES --> SEND_TO_LLM
+    RECEIVE_RESPONSE --> LLM_TASK_FILES
+    LLM_TASK_FILES --> LOAD_CODE_IN_TASK_RELEVANT_CODE_STORE
+    LOAD_CODE_IN_TASK_RELEVANT_CODE_STORE --> CREATE_INSTRUCTIONS
+    CREATE_INSTRUCTIONS --> ASK_LLM_TO_READ_TASK_RELATED_CODE_AND_PROVIDE_UPDATE_PLAN
+    ASK_LLM_TO_READ_TASK_RELATED_CODE_AND_PROVIDE_UPDATE_PLAN --> SEND_REQUEST_FOR_UPDATE_PLAN
 ```
 
 # Further Exploration Plan

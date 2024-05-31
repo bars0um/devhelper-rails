@@ -1,3 +1,7 @@
+## 31-05-2024
+
+- added diagnose capability. This is because you seldom get code that is fully functional out of the box. The point here is you run the resume command to load the current state of the project. You then pass the diagnose command along with the current error you see and the LLM is guided through resolving that error.
+
 ## 30-05-2024
 
 - separated update message from epic and organized better the instruction queue with placeholders that are filtered out if they are set to None...this way we reuse the code writing process for creations and resume/update logic

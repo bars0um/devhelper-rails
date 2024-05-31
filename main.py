@@ -5,8 +5,8 @@ import requests
 import sseclient  # pip install sseclient-py
 import json
 from utils.cli_input import cli_input
-from utils.processors import process_response, load_code, load_description,scan_file
-from utils.extractors import extract_epic_files, extract_and_save_code_to_filepath_in_comments, extract_update_files
+from utils.processors import process_response, load_code, load_description, scan_file, load_code_from_list
+from utils.extractors import extract_epic_files, extract_and_save_code_to_filepath_in_comments, extract_update_files, extract_task_relevant_files
 import utils.datastore as datastore
 import utils.constants as constants
 import logging
@@ -46,6 +46,12 @@ def get_update_plan_message():
     else:
         return None
 
+def get_error_report_message():
+    if len(datastore.diagnose_error) > 0:
+        return { "role": "user", "content": "The application throws the following error: " + datastore.diagnose_error + " \n " }
+    else:
+        return None
+
 def get_epic_message():
     """
     updates the epic message with any changes to state that are pertinent to the conversation with the LLM
@@ -58,6 +64,14 @@ def get_epic_message():
                 }
     else:
         return { "role": "system", "content": "The following is the current project description." + datastore.epic }
+
+def get_task_relevant_code():
+    # if datastore.read_files is set, read the content and return it here
+    if len(datastore.task_relevant_code) > 0:
+        return {"role":"system", "content": " the following is the relevant code: \n " + datastore.task_relevant_code}
+    else:
+        return None
+
 
 def create_instructions():
     """
@@ -83,7 +97,14 @@ def create_instructions():
                              " \n please only write " + datastore.update_queue[0] + ". Please add descriptive comments in all the code you write." \
                                     + " Note: " +  messages.how_to_write_code.replace("FILE_PATH", datastore.update_queue[0])}
         history.append(write_code_message)
-        return trim_list([get_epic_message(),get_update_directive_message(),get_update_plan_message(),write_code_message])
+        return trim_list([
+            get_epic_message(),
+            get_error_report_message(),
+            get_update_directive_message(),
+            get_update_plan_message(),
+            get_task_relevant_code(),
+            write_code_message
+            ])
 
     elif datastore.next_step == states.LLM_FIX_BUGGY_FILE:
         with open(datastore.update_queue[0],"r") as buggy_file:
@@ -95,7 +116,14 @@ def create_instructions():
                                     + markers.START_CODE_RESPONSE + " \n " + buggy_code + " \n " + markers.END_CODE_RESPONSEmain.py                }
             datastore.next_step = states.LLM_WRITES_CODE
             history.append(fix_code_error)
-            return trim_list([get_epic_message(),get_update_directive_message(),get_update_plan_message(),fix_code_error])
+            return trim_list([
+                get_epic_message(),
+                get_error_report_message(),
+                get_update_directive_message(),
+                get_task_relevant_code(),
+                get_update_plan_message(),
+                fix_code_error
+                ])
 
     elif datastore.next_step == states.LLM_REVIEWS_CURRENT_PROJECT_STATE:
         print(f"reading project code from {datastore.project_folder}")
@@ -111,24 +139,57 @@ def create_instructions():
         datastore.next_step = states.LLM_CONFIRMS_REVIEW_OF_CURRENT_PROJECT_STATE #not sure if this is an unnessescary step...
  
 
-        return [get_epic_message(),system_resume_message]
+        return [
+                get_epic_message(),
+                system_resume_message
+                ]
    
     elif datastore.next_step == states.LLM_EXPLAIN_UPDATE_PLAN:
         
         update_code_message ={ "role": "system", "content": "Please review user update request. Explain the changes that must be made to fulfill the user update request" }
         history.append(update_code_message)
 
-        return trim_list([get_epic_message(),get_update_directive_message(),update_code_message])
+        return trim_list([
+            get_epic_message(),
+            get_update_directive_message(),
+            update_code_message
+            ])
    
     elif datastore.next_step == states.LLM_PROVIDES_UPDATE_FILE_QUEUE:
 
         logging.info("asking llm to provide update queue")
         create_queue_directive={"role":"user","content": messages.define_update_queue }#+ " \n Do this for the user update request: " + update_request["content"] }
     
-        return trim_list([get_epic_message(),get_update_directive_message(),get_update_plan_message(),create_queue_directive])
+        return trim_list([
+            get_epic_message(),
+            get_error_report_message(),
+            get_update_directive_message(),
+            get_update_plan_message(),
+            get_task_relevant_code(),
+            create_queue_directive
+            ])
 
     elif datastore.next_step == states.USER_PROVIDES_UPDATE_DETAILS:
         return actions.NOOP
+
+    elif datastore.next_step == states.DIAGOSIS_LLM_IDENTIFIES_ROOT_CAUSE_FILES:
+        logging.info("asking llm to review error and determine which files it would like to review, update or create to find and fix the error")
+        error_to_llm_and_read_files_message={"role": "user", "content":" Please provide a list of the files that you need to review, create or update to find and fix the error. " + messages.list_files_to_read }
+        return trim_list([
+            get_epic_message(),
+            get_error_report_message(),
+            error_to_llm_and_read_files_message
+            ])
+                
+    elif datastore.next_step == states.LLM_DETERMINE_ROOT_CAUSE_FROM_FILES:
+        logging.info("ask llm to review code and determine root cause, identifying update plan so we can switch over to update logic")
+        determine_root_cause_message = {"role":"user", "content":" please read the relevant code, determine the root cause of the error and explain how to fix the error"}
+        return trim_list([
+            get_epic_message(),
+            get_error_report_message(),
+            get_task_relevant_code(),
+            determine_root_cause_message
+            ])
 
 def send_instructions_to_llm(instructions):
     """
@@ -217,6 +278,14 @@ def process(response):
         datastore.update_queue = extract_update_files(response)
         datastore.next_step = states.LLM_WRITES_CODE
 
+    elif datastore.next_step == states.DIAGOSIS_LLM_IDENTIFIES_ROOT_CAUSE_FILES:
+        datastore.task_relevant_code = load_code_from_list(extract_task_relevant_files(response))
+        datastore.next_step = states.LLM_DETERMINE_ROOT_CAUSE_FROM_FILES
+
+    # Diagnostic workflow now fuses with update workflow
+    elif datastore.next_step == states.LLM_DETERMINE_ROOT_CAUSE_FROM_FILES:
+        datastore.update_plan = response
+        datastore.next_step = states.LLM_PROVIDES_UPDATE_FILE_QUEUE
 
 def get_main_directive_from_user():
     """
@@ -242,11 +311,18 @@ def get_main_directive_from_user():
         logging.info("Stream Manager: Resuming an already created project with specific project folder provided")
         datastore.project_folder = user_message.split(" ")[1]
         datastore.app_name = user_message.split(" ")[2]
+        messages.customize_app_name(datastore.app_name)
         datastore.next_step = states.LLM_REVIEWS_CURRENT_PROJECT_STATE
+
     elif "%update" in user_message:
         logging.info("Update command detected, asking for update queue list")
         datastore.update_directive = user_message.replace("%update","")
         datastore.next_step = states.LLM_EXPLAIN_UPDATE_PLAN
+
+    elif "%diagnose" in user_message:
+        logging.info("Diagnose error command")
+        datastore.diagnose_error = user_message.replace("%diagnose ","")
+        datastore.next_step = states.DIAGOSIS_LLM_IDENTIFIES_ROOT_CAUSE_FILES
 
     elif "%appinfo" in user_message:
         print("appfiles: ", datastore.app_files)

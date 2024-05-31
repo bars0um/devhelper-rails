@@ -8,6 +8,7 @@ def customize_app_name(app_name):
     global define_update_queue
     global how_to_write_code
     global how_to_write_summary
+    global list_files_to_read
 
     app_files_not_defined = app_files_not_defined.replace("myapp",app_name)
     code_not_found = code_not_found.replace("myapp",app_name)
@@ -16,7 +17,7 @@ def customize_app_name(app_name):
     how_to_write_code = how_to_write_code.replace("myapp",app_name)
     how_to_write_summary = how_to_write_summary.replace("myapp",app_name)
     define_update_queue = define_update_queue.replace("myapp",app_name)
-
+    list_files_to_read = list_files_to_read.replace("myapp",app_name)
 
 general_system_message ="""
 You are an expert ruby and ruby on rails developer that can write code for any application requested from you. 
@@ -86,7 +87,7 @@ END_SUMMARY
 """
 
 define_update_queue="""
-Create a list of the files that must be updated to implement the changes requested by the user.
+Create a list of the files that must be created or updated to implement the changes requested by the user.
 
 Use the following response template: 
 START_UPDATE_QUEUE
@@ -103,3 +104,19 @@ END_UPDATE_QUEUE
 """
 
 review_complete="REVIEW COMPLETE, READY FOR FURTHER INSTRUCTIONS"
+
+list_files_to_read="""
+Create a list of the files that need to be reviews, updated or created:
+
+TASK_FILES
+{    
+    "task_files": 
+    [  "/app/myapp/app/controllers/admin/users_controller.rb", 
+        "/app/myapp/app/views/admin/users/index.html.erb",
+        "/app/myapp/db/migrate/create_users.rb",
+        "/app/myapp/db/config/initializers/devise.rb",
+        ...
+    ]
+}
+END_TASK_FILES
+"""

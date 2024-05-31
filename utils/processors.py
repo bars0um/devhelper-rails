@@ -402,3 +402,20 @@ def load_code(dir_path):
         files = read_files(dir_path)
     
     return fetch_code_blocks(files)
+
+
+def load_code_from_list(file_list):
+
+    code_block = ""
+    for file in file_list:
+        if not os.path.isfile(file):
+            code = "FILE_DOES_NOT_EXIST"
+
+        else:
+            with open(file) as file_content:
+                code = file_content.read()
+
+        code_block += " \n " + file + " \n " + code + " \n "
+    
+    return code_block
+
