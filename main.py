@@ -113,7 +113,7 @@ def create_instructions():
                             "role":"user",
                             "content": "linter has detected an issue in the code for " + datastore.update_queue[0] + " please correct the problem and rewrite the file. bug report: " + datastore.last_linter_error \
                                     + " \n " + messages.how_to_write_code.replace("file_path", datastore.update_queue[0] ) + " here is the code that requires correction: " \
-                                    + markers.START_CODE_RESPONSE + " \n " + buggy_code + " \n " + markers.END_CODE_RESPONSEmain.py                }
+                                    + markers.START_CODE_RESPONSE + " \n " + buggy_code + " \n " + markers.END_CODE_RESPONSE                }
             datastore.next_step = states.LLM_WRITES_CODE
             history.append(fix_code_error)
             return trim_list([

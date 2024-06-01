@@ -149,3 +149,5 @@ The following are some of the challenges I've noted:
 ## TODO
 
 - stop repeated attempts to fix buggy code that don't lead to a successful scan after 3 attempts and give user option to assist the assistant
+- update logic should follow diagnose approach, read to model the relevant files only and not everything so as to keep from diverging
+- make LLM build test cases and run them to fix bugs earlier
