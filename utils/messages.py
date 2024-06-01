@@ -63,10 +63,11 @@ START_CODE_RESPONSE
 
 puts "hello"
 END_CODE_RESPONSE
-§
-When writing code, write out the full logic, do not put placeholder comments, always implement a file fully.
 
-only write the requested file FILE_PATH 
+When writing code, write out the full logic, do not put placeholder comments, always implement a file fully. Add explanatory comments in the code please.
+
+only write the requested file FILE_PATH
+
 """
 
 app_files_not_defined ="""
@@ -106,8 +107,9 @@ END_UPDATE_QUEUE
 review_complete="REVIEW COMPLETE, READY FOR FURTHER INSTRUCTIONS"
 
 list_files_to_read="""
-Create a list of the files that need to be reviews, updated or created:
+Create a list of the files that need to be reviewed, updated or created:
 
+Use the following response template, do not add comments, follow the format exactly: 
 TASK_FILES
 {    
     "task_files": 
@@ -120,3 +122,5 @@ TASK_FILES
 }
 END_TASK_FILES
 """
+
+linter_warning_nonsense="(Using Ruby 2.7 parser; configure using TargetRubyVersion parameter, under AllCops)"

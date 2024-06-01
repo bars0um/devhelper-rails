@@ -415,7 +415,7 @@ def load_code_from_list(file_list):
             with open(file) as file_content:
                 code = file_content.read()
 
-        code_block += " \n " + file + " \n " + code + " \n "
+        code_block += markers.START_CODE_RESPONSE + " \n # " + file + " \n " + code + " \n " + markers.END_CODE_RESPONSE + " \n "
     
     return code_block
 

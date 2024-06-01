@@ -1,3 +1,9 @@
+## 06-01-2024
+
+- Update logic modified to use the task file list approach used in diagnosis workflow
+- also added logic to detect non-conformance to code writing format and to highlight this as a "bug", bugs now being either actual syntax bugs or format of response.
+- linter output seems a bit cryptic and does not always lead to the LLM correctly resolving the syntax issue
+
 ## 31-05-2024
 
 - added diagnose capability. This is because you seldom get code that is fully functional out of the box. The point here is you run the resume command to load the current state of the project. You then pass the diagnose command along with the current error you see and the LLM is guided through resolving that error.

@@ -16,6 +16,7 @@ import utils.states as states
 import utils.llm as llm
 import utils.actions as actions
 import utils.markers as markers
+import utils.bugs as bugs
 
 log_format = "%(asctime)s - %(levelname)-5s - %(filename)s:%(lineno)s - %(funcName)s - %(message)s"
 logging.basicConfig(filename='dev-ai-assist.log', filemode='w',level=logging.INFO,format=log_format)
@@ -58,12 +59,12 @@ def get_epic_message():
     """
     if len(datastore.app_files) > 0:
         app_files = " , ".join(datastore.app_files)
-        return {"role": "system", "content": "The following is the current project description." \
+        return {"role": "system", "content": "The following is the current project description. " \
                 + datastore.epic + "\n the following is a listing of the files for this application: \n " + app_files
                 #+ " \n the following is the current code base of this application: \n " + datastore.code ## REMOVED AS THIS CAUSES DIVERGENCE...CONSIDER PUTTING SUMMARIES
                 }
     else:
-        return { "role": "system", "content": "The following is the current project description." + datastore.epic }
+        return { "role": "system", "content": "The following is the current project description. " + datastore.epic }
 
 def get_task_relevant_code():
     # if datastore.read_files is set, read the content and return it here
@@ -72,6 +73,11 @@ def get_task_relevant_code():
     else:
         return None
 
+def get_how_to_write_code():
+    return  {
+                "role":"user",
+                "content": messages.how_to_write_code.replace("file_path", datastore.update_queue[0] )
+            }
 
 def create_instructions():
     """
@@ -94,8 +100,8 @@ def create_instructions():
         #TODO: add current code state block here...and then insert it in the returned instructions
         write_code_message= {"role":"user",
                              "content": #"The following is the current project code: " + datastore.code + # REMOVED AS THIS THROWS OFF THE LLM AND CAUSES HUGE DIVERGENCE
-                             " \n please only write " + datastore.update_queue[0] + ". Please add descriptive comments in all the code you write." \
-                                    + " Note: " +  messages.how_to_write_code.replace("FILE_PATH", datastore.update_queue[0])}
+                             " \n please only write " + datastore.update_queue[0] + " . " 
+                                   }
         history.append(write_code_message)
         return trim_list([
             get_epic_message(),
@@ -103,17 +109,28 @@ def create_instructions():
             get_update_directive_message(),
             get_update_plan_message(),
             get_task_relevant_code(),
+            get_how_to_write_code(),
             write_code_message
             ])
 
     elif datastore.next_step == states.LLM_FIX_BUGGY_FILE:
-        with open(datastore.update_queue[0],"r") as buggy_file:
-            buggy_code = buggy_file.read()
-            fix_code_error= {
+            buggy_code = datastore.buggy_code
+            
+            if datastore.bug_type == bugs.FORMAT:
+                fix_code_error= {
+                            "role":"user",
+                            "content": " you did not use the correct format for writing " + datastore.update_queue[0] \
+                            + " \n " + " here is the response that does not contain the code in the correct format: " \
+                            + buggy_code + " \n " }
+                datastore.bug_type = bugs.SYNTAX
+            else:
+                fix_code_error= {
                             "role":"user",
                             "content": "linter has detected an issue in the code for " + datastore.update_queue[0] + " please correct the problem and rewrite the file. bug report: " + datastore.last_linter_error \
-                                    + " \n " + messages.how_to_write_code.replace("file_path", datastore.update_queue[0] ) + " here is the code that requires correction: " \
-                                    + markers.START_CODE_RESPONSE + " \n " + buggy_code + " \n " + markers.END_CODE_RESPONSE                }
+                                    + " \n " + " here is the code that requires correction: " \
+                                    + " \n " + buggy_code + " \n " }
+
+          
             datastore.next_step = states.LLM_WRITES_CODE
             history.append(fix_code_error)
             return trim_list([
@@ -122,7 +139,8 @@ def create_instructions():
                 get_update_directive_message(),
                 get_task_relevant_code(),
                 get_update_plan_message(),
-                fix_code_error
+                fix_code_error,
+                get_how_to_write_code()
                 ])
 
     elif datastore.next_step == states.LLM_REVIEWS_CURRENT_PROJECT_STATE:
@@ -174,7 +192,7 @@ def create_instructions():
 
     elif datastore.next_step == states.DIAGOSIS_LLM_IDENTIFIES_ROOT_CAUSE_FILES:
         logging.info("asking llm to review error and determine which files it would like to review, update or create to find and fix the error")
-        error_to_llm_and_read_files_message={"role": "user", "content":" Please provide a list of the files that you need to review, create or update to find and fix the error. " + messages.list_files_to_read }
+        error_to_llm_and_read_files_message={"role": "user", "content": messages.list_files_to_read }
         return trim_list([
             get_epic_message(),
             get_error_report_message(),
@@ -240,7 +258,16 @@ def process(response):
         datastore.next_step = states.LLM_WRITES_CODE
 
     elif datastore.next_step == states.LLM_WRITES_CODE:
-        code_file = extract_and_save_code_to_filepath_in_comments(response)
+
+        try:
+            code_file = extract_and_save_code_to_filepath_in_comments(response)
+        except Exception as e:
+            if "Missing" in repr(e):
+                datastore.buggy_code = response
+                datastore.next_step = states.LLM_FIX_BUGGY_FILE
+                datastore.bug_type = bugs.FORMAT
+                return
+
         report = scan_file(code_file)
         logging.info("scan step completed")
         logging.info(report)
@@ -254,13 +281,15 @@ def process(response):
             datastore.code += "\n " + response + " \n "
                 
         else:
+            with open(datastore.update_queue[0],"r") as buggy_file:
+                datastore.buggy_code = buggy_file.read()
             print(f'scan failed for {code_file}')
             logging.info("----Scan Fail----")
             logging.info(f"datastore file {datastore.update_queue[0]}")
             logging.info(report)
             logging.info("----/Scan Fail/----")
             datastore.next_step = states.LLM_FIX_BUGGY_FILE
-            datastore.last_linter_error = report
+            datastore.last_linter_error = report.replace(messages.linter_warning_nonsense,"")
 
     elif datastore.next_step == states.LLM_CONFIRMS_REVIEW_OF_CURRENT_PROJECT_STATE:
         if messages.review_complete in response:
@@ -276,6 +305,7 @@ def process(response):
 
     elif datastore.next_step == states.LLM_PROVIDES_UPDATE_FILE_QUEUE:
         datastore.update_queue = extract_update_files(response)
+        datastore.task_relevant_code = load_code_from_list(datastore.update_queue)
         datastore.next_step = states.LLM_WRITES_CODE
 
     elif datastore.next_step == states.DIAGOSIS_LLM_IDENTIFIES_ROOT_CAUSE_FILES:
@@ -358,7 +388,9 @@ def main():
         instructions = create_instructions()
         logging.info(f"after instruction state: {datastore.next_step}")
         logging.info("instructions:")
-        logging.info(instructions)
+        
+        for instruction in instructions:
+            logging.info(instruction)
 
         if instructions != actions.NOOP:
             response = send_instructions_to_llm(instructions)

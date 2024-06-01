@@ -84,7 +84,9 @@ def extract_epic_files(data):
     return json_data["app_files"]
 
 def extract_and_save_code_to_filepath_in_comments(input_string):
-
+    
+    if not markers.START_CODE_RESPONSE in input_string or not markers.END_CODE_RESPONSE in input_string:
+        raise Exception("Missing START_CODE_RESPONSE and END_CODE_RESPONSE markers")
     code = extract(markers.START_CODE_RESPONSE,markers.END_CODE_RESPONSE,input_string)
     file_path = get_file_path(code)
     create_file(file_path,code)
