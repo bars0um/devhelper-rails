@@ -53,6 +53,9 @@ def get_error_report_message():
     else:
         return None
 
+def get_last_assistant_message():
+    return datastore.last_assistant_message
+
 def get_epic_message():
     """
     updates the epic message with any changes to state that are pertinent to the conversation with the LLM
@@ -75,7 +78,7 @@ def get_task_relevant_code():
 
 def get_how_to_write_code():
     return  {
-                "role":"user",
+                "role":"system",
                 "content": messages.how_to_write_code.replace("file_path", datastore.update_queue[0] )
             }
 
@@ -118,16 +121,17 @@ def create_instructions():
             
             if datastore.bug_type == bugs.FORMAT:
                 fix_code_error= {
-                            "role":"user",
-                            "content": " you did not use the correct format for writing " + datastore.update_queue[0] \
-                            + " \n " + " here is the response that does not contain the code in the correct format: " \
-                            + buggy_code + " \n " }
+                            "role":"system",
+                            "content": " Problem, you did not use the correct format for writing " + datastore.update_queue[0] }
                 datastore.bug_type = bugs.SYNTAX
             else:
+                add_explanation = ""
+                if messages.linter_unexpected_end in datastore.last_linter_error:
+                    add_explanation=" you have not properly terminated one of the blocks in the code, please fix it "
                 fix_code_error= {
-                            "role":"user",
-                            "content": "linter has detected an issue in the code for " + datastore.update_queue[0] + " please correct the problem and rewrite the file. bug report: " + datastore.last_linter_error \
-                                    + " \n " + " here is the code that requires correction: " \
+                            "role":"system",
+                            "content": " linter has detected an issue in the code for " + datastore.update_queue[0] + " please explain the error, correct the problem and rewrite the file. bug report: " + datastore.last_linter_error \
+                                    + " " + add_explanation +  " \n " + " here is the code that requires correction: " \
                                     + " \n " + buggy_code + " \n " }
 
           
@@ -139,6 +143,7 @@ def create_instructions():
                 get_update_directive_message(),
                 get_task_relevant_code(),
                 get_update_plan_message(),
+                get_last_assistant_message(),
                 fix_code_error,
                 get_how_to_write_code()
                 ])

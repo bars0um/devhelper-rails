@@ -38,7 +38,6 @@ START_APPFILES
             "/app/myapp/app/views/admin/users/index.html.erb",
             "/app/myapp/db/migrate/create_users.rb",
             "/app/myapp/db/config/initializers/devise.rb",
-            ...
             ]
 }
 END_APPFILES
@@ -64,7 +63,9 @@ START_CODE_RESPONSE
 puts "hello"
 END_CODE_RESPONSE
 
-When writing code, write out the full logic, do not put placeholder comments, always implement a file fully. Add explanatory comments in the code please.
+When writing code, write out the full logic, do not put placeholder comments, always implement a file fully.
+
+Ensure that the code is enclosed between the START_CODE_RESPONSE and END_CODE_RESPONSE markers.
 
 only write the requested file FILE_PATH
 
@@ -98,7 +99,6 @@ START_UPDATE_QUEUE
         "/app/myapp/app/views/admin/users/index.html.erb",
         "/app/myapp/db/migrate/create_users.rb",
         "/app/myapp/db/config/initializers/devise.rb",
-        ...
     ]
 }
 END_UPDATE_QUEUE
@@ -107,20 +107,16 @@ END_UPDATE_QUEUE
 review_complete="REVIEW COMPLETE, READY FOR FURTHER INSTRUCTIONS"
 
 list_files_to_read="""
-Create a list of the files that need to be reviewed, updated or created:
+Based on the user request or issue, create a list of the files that need to be reviewed, updated or created.
 
 Use the following response template, do not add comments, follow the format exactly: 
 TASK_FILES
 {    
     "task_files": 
-    [  "/app/myapp/app/controllers/admin/users_controller.rb", 
-        "/app/myapp/app/views/admin/users/index.html.erb",
-        "/app/myapp/db/migrate/create_users.rb",
-        "/app/myapp/db/config/initializers/devise.rb",
-        ...
-    ]
+    [   file_1, file_2,...   ]
 }
 END_TASK_FILES
 """
 
 linter_warning_nonsense="(Using Ruby 2.7 parser; configure using TargetRubyVersion parameter, under AllCops)"
+linter_unexpected_end="unexpected token $"
