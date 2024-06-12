@@ -1,4 +1,17 @@
-## 06-01-2024
+## 12-06-2024
+
+- messages changed to accommodate js code instead of ruby - this is temporary and the plan is to make this more language agnostic
+- allowed for more LLM behavioral issues treatment such as incorrect inferrred path for the file being written
+- created two new flows:
+  - %update %file to bring focus to a particular file but allow the LLM freedom in what updates to make to achieve the requested change (this is expected since files can have dependencies that need updating)
+  - %modify to specifically address a particular file with no other changes expected
+- curses panes used to separate the various aspects of the code:
+  - An instructions pane showing the instructions sent.
+  - A system pane to show messages concerning the flow
+  - An LLM pane to show the response from the LLM
+  - A user pane to show the user input
+
+## 01-06-2024
 
 - Update logic modified to use the task file list approach used in diagnosis workflow
 - also added logic to detect non-conformance to code writing format and to highlight this as a "bug", bugs now being either actual syntax bugs or format of response.

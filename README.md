@@ -12,6 +12,7 @@ Important notes:
 
 - to limit the chaos involved I forced temperature to 0
 - to have some reference for determinisim I set some seed
+- despite the various guardrails, model quality is key here. I've attempted to make the code as flexible as possible so as to make it easy to add guardrails. The logic mainly involves creating an instruction, sending it to the LLM, receving a response and processing it. From here you either feed more info to the LLM based on an update_queue of files that need to be handled or you fall back to user input.
 
 # How this works
 
@@ -55,7 +56,19 @@ start the script and the enter the following:
 %update _describe your update request here_
 ```
 
+if you add a %file directive as follows the update is expected to revolve around the file you specifically highlight:
+
+```
+%update %file /myfile.js please update this file to add this cool feature
+```
+
 - Must be run after a resume command is provided first, this will instruct the LLM to explain how it intends to do the change you request. And then guides it through doing that.
+
+```
+%modify <filepath> _describe your update request here_
+```
+
+- this command specifically tells the LLM to change the specified file only
 
 ```
 %diagnose _error message_
@@ -150,5 +163,4 @@ The following are some of the challenges I've noted:
 ## TODO
 
 - stop repeated attempts to fix buggy code that don't lead to a successful scan after 3 attempts and give user option to assist the assistant
-- update logic should follow diagnose approach, read to model the relevant files only and not everything so as to keep from diverging
 - make LLM build test cases and run them to fix bugs earlier
