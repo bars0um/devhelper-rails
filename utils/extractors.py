@@ -17,7 +17,7 @@ def get_file_path(code):
     """
     if len(code)>0:
         # Regular expression pattern to match a file path in various comment formats
-        pattern = re.compile(r"^\s*(?:[<!%\-]*)\s*#*\s*(.*\/[\w\/.\-]+)", re.MULTILINE)
+        pattern = re.compile(r"^\s*(?:[<!%\-]*)\s*//*\s*(.*\/[\w\/.\-]+)", re.MULTILINE)
         # Search through the entire content to find the first valid file path in a comment
         for line in code.splitlines():
             match = pattern.match(line)
@@ -83,28 +83,62 @@ def extract_epic_files(data):
     
     return json_data["app_files"]
 
+def remove_triple_ticks(code):
+
+    cleaned_text = re.sub(r'```[a-z]*\n([\s\S]*?)```', r'\1', code)
+    
+    return cleaned_text
+
 def extract_and_save_code_to_filepath_in_comments(input_string):
     
+    print("extract_and_save_code_to_filepath called")
     if not markers.START_CODE_RESPONSE in input_string or not markers.END_CODE_RESPONSE in input_string:
         raise Exception("Missing START_CODE_RESPONSE and END_CODE_RESPONSE markers")
     code = extract(markers.START_CODE_RESPONSE,markers.END_CODE_RESPONSE,input_string)
+    code = remove_triple_ticks(code)
     file_path = get_file_path(input_string)
     create_file(file_path,code)
     
     return file_path
 
-def extract_update_files(data):
+def strip_comments(text):
+   lines = text.split('\n')
+   stripped_lines = []
+   for line in lines:
+       if '//' in line:
+           line = line[:line.index('//')]
+       stripped_lines.append(line)
+   return '\n'.join(stripped_lines)
 
+def extract_update_files(data):
+    
+    data = strip_comments(data)
     plain_data = extract(markers.START_UPDATE_QUEUE,markers.END_UPDATE_QUEUE,data)
     # Parse JSON data
+    logging.info("extracting update files: plain_data")
+    logging.info(plain_data)
     json_data = json.loads(plain_data)
     logging.info(f"update files data: {data} ")
+    update_list = []
     
     # Extract file paths from the list and store them in a new list
-    if "update_files" not in json_data:
+    if "update_files" in json_data:
+        for file in json_data["update_files"]:
+            if any(re.findall(r'mp3|png|jpg|jpeg|node_modules',file,re.IGNORECASE)):
+                continue
+            else:
+                update_list.append(file)
+    elif "create_and_update_files" in json_data:
+        for file in json_data["create_and_update_files"]:
+            if any(re.findall(r'mp3|png|jpg|jpeg|node_modules',file,re.IGNORECASE)):
+                continue
+            else:
+                update_list.append(file)
+    else: 
+
         raise Exception("No update files could be extracted")
-        
-    return json_data["update_files"]
+
+    return update_list
 
 def extract_task_relevant_files(data):
     plain_data = extract(markers.READ_FILES,markers.END_READ_FILES,data)

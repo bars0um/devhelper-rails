@@ -37,7 +37,7 @@ START_APPFILES
             "/app/myapp/app/controllers/admin/users_controller.rb", 
             "/app/myapp/app/views/admin/users/index.html.erb",
             "/app/myapp/db/migrate/create_users.rb",
-            "/app/myapp/db/config/initializers/devise.rb",
+            "/app/myapp/db/config/initializers/devise.rb"
             ]
 }
 END_APPFILES
@@ -46,21 +46,21 @@ how_to_write_code="""
 When writing the requested file you must use this template:
 
 START_CODE_RESPONSE
-#<filepath>
+// <filepath>
 <code>
 END_CODE_RESPONSE
 
 where:
 <language> represents the language you are writing the code in
-#<filepath> is a comment with the absolute path to the file you are writing. Remember this should always be under the /app directory, so ensure all file paths are prefixed with /app/myapp where myapp is the name of the app you have been asked to work on. If a file needs to go in a subdirectory such as model or controller or something else, make sure to add the full absolute folder path to the /app/myapp prefix.
+// <filepath> is a comment with the absolute path to the file you are writing. Remember this should always be under the /app directory, so ensure all file paths are prefixed with /app/myapp where myapp is the name of the app you have been asked to work on. If a file needs to go in a subdirectory such as model or controller or something else, make sure to add the full absolute folder path to the /app/myapp prefix.
 <code> is the code you are writing to the file
 
 Here is an example of how you should write files. Please follow these directions strictly.
 
 START_CODE_RESPONSE
-#/app/myapp/services/hello.rb 
+// /app/myapp/services/hello.js
 
-puts "hello"
+console.log("hello")
 END_CODE_RESPONSE
 
 When writing code, write out the full logic, do not put placeholder comments, always implement a file fully.
@@ -83,13 +83,14 @@ how_to_write_summary ="""
 Please fill the following template exactly, placing the summary in the <PLACEHOLDER> field, remember to put the file path at the top:
 
 START_SUMMARY
-#FILE_PATH
+// FILE_PATH
 <PLACEHODLER>
 END_SUMMARY
 """
 
 define_update_queue="""
-Create a list of the files that must be created or updated to implement the changes requested by the user.
+Create a list of the files that must be created or updated to implement the changes requested by the user: REQUEST_TEXT. 
+Do not list media files. DO NOT ADD ANY COMMENTS.
 
 Use the following response template: 
 START_UPDATE_QUEUE
@@ -98,7 +99,7 @@ START_UPDATE_QUEUE
     [  "/app/myapp/app/controllers/admin/users_controller.rb", 
         "/app/myapp/app/views/admin/users/index.html.erb",
         "/app/myapp/db/migrate/create_users.rb",
-        "/app/myapp/db/config/initializers/devise.rb",
+        "/app/myapp/db/config/initializers/devise.rb"
     ]
 }
 END_UPDATE_QUEUE
@@ -107,13 +108,13 @@ END_UPDATE_QUEUE
 review_complete="REVIEW COMPLETE, READY FOR FURTHER INSTRUCTIONS"
 
 list_files_to_read="""
-Based on the user request or issue, create a list of the files that need to be reviewed, updated or created.
+Based on the user request or issue, create a list of the files that need to be reviewed, updated or created. Do not list media files.
 
 Use the following response template, do not add comments, follow the format exactly: 
 TASK_FILES
 {    
     "task_files": 
-    [   file_1, file_2,...   ]
+    [   file_1, file_2,file_3  ]
 }
 END_TASK_FILES
 """

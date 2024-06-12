@@ -1,0 +1,7 @@
+MODIFY="%modify"
+CREATE="%create"
+UPDATE="%update"
+RESUME="%resume"
+FILE="%file"
+DIAGNOSE="%diagnose"
+APPINFO="%appinfo"

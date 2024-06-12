@@ -1,3 +1,5 @@
+from utils.panes import get_user_input
+
 def cli_input(prompt: str = "") -> str:
     start_marker = "```"
     end_marker = "```"

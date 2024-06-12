@@ -346,19 +346,69 @@ def process_response(input_string):
     return action
 
 
-
 def read_files(dir_path: str):
     for path in glob.iglob(f'{dir_path}/**', recursive=True):
-        if path.endswith(('.rb', '.erb', '.html', '.md')):
-            with open(path, 'r') as file:
-                content = file.read()
-                yield path, content 
+        if os.path.isfile(path) and not "node_modules" in path:
+            try:
+                with open(path, 'r', encoding='utf-8') as file:  # Specify encoding
+                    content = file.read()
+                    yield path, content
+            except UnicodeDecodeError:
+                print(f"Error reading file: {path}. Skipping...")
+            except Exception as e:
+                print(f"Error processing file: {path}. Reason: {str(e)}")
+
+def minifer(js_code):
+       # Remove whitespace except within strings and regular expressions
+    minified_code = ""
+    in_string = False
+    in_regex = False
+    for char_index, char in enumerate(js_code):
+        if char == '"' and (char_index == 0 or js_code[char_index - 1] != '\\'):
+            in_string = not in_string
+        elif char == '/' and (char_index == 0 or js_code[char_index - 1] != '\\'):
+            next_char = js_code[char_index + 1] if char_index + 1 < len(js_code) else None
+            if next_char == '/':
+                # Single-line comment
+                end_index = js_code.find('\n', char_index)
+                if end_index == -1:
+                    # End of file
+                    break
+                minified_code += js_code[char_index:end_index]
+                continue
+            elif next_char == '*':
+                # Multi-line comment
+                end_index = js_code.find('*/', char_index)
+                if end_index == -1:
+                    # End of file
+                    break
+                minified_code += js_code[char_index:end_index + 2]
+                continue
+            elif next_char != '=' and not in_regex:
+                # Division operator
+                minified_code += char
+                continue
+        elif char == '/' and (char_index == 0 or js_code[char_index - 1] != '\\'):
+            in_regex = not in_regex
+        elif char == '\n' and in_string:
+            # Ignore newline characters within strings
+            minified_code += char
+            continue
+        elif char.isspace() and not in_string and not in_regex:
+            # Remove whitespace
+            continue
+        
+        minified_code += char
+
+    return minified_code
 
 def fetch_code_blocks(files):
     code_base = ""
     for path, content in files:
+        datastore.loaded_files.append(path)
         filename = Path(path)
-        code_base+=(f"```\n# {filename}\n{content}```\n")
+        mini_code = content
+        code_base+=(f"```\n# {filename}\n{mini_code}```\n")
     return code_base
 
 def load_description(file_path):
@@ -381,9 +431,10 @@ def read_app_files():
             if len(app_files) > 0:
                 datastore.app_files = app_files
                 for app_file_path in datastore.app_files:
-                    with open(app_file_path,"r") as app_file:
-                        content = app_file.read()
-                        yield app_file_path, content 
+                    if not "node_modules" in app_file_path:
+                        with open(app_file_path,"r") as app_file:
+                            content = app_file.read()
+                            yield app_file_path, content 
             else:
                 raise Exception("could not load app_files")
 
