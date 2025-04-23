@@ -1,3 +1,12 @@
+## 22-05-2025
+
+- switched to streamlit for visual layout to simplify
+- ui.py decouples visual from core in devhelpercore, update function is passed to devhelpercore for notifying frontend of changes to render
+- added logic for summarizing the app_files code as a means for LLM to maintain a shorter context window of the layout of the code without having to keep all of the code in the context
+- files that are to be updated will first be read to the llm so it that changes are contextual sensible
+- for streamlit version created ddatastore to replace the flat datastore with a class object that can be passed between ui and backend code for easy update notification and rendering
+
+
 ## 12-06-2024
 
 - messages changed to accommodate js code instead of ruby - this is temporary and the plan is to make this more language agnostic

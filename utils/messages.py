@@ -46,19 +46,19 @@ how_to_write_code="""
 When writing the requested file you must use this template:
 
 START_CODE_RESPONSE
-// <filepath>
+# <filepath>
 <code>
 END_CODE_RESPONSE
 
 where:
 <language> represents the language you are writing the code in
-// <filepath> is a comment with the absolute path to the file you are writing. Remember this should always be under the /app directory, so ensure all file paths are prefixed with /app/myapp where myapp is the name of the app you have been asked to work on. If a file needs to go in a subdirectory such as model or controller or something else, make sure to add the full absolute folder path to the /app/myapp prefix.
+# <filepath> is a comment with the absolute path to the file you are writing. Remember this should always be under the /app directory, so ensure all file paths are prefixed with /app/myapp where myapp is the name of the app you have been asked to work on. If a file needs to go in a subdirectory such as model or controller or something else, make sure to add the full absolute folder path to the /app/myapp prefix.
 <code> is the code you are writing to the file
 
 Here is an example of how you should write files. Please follow these directions strictly.
 
 START_CODE_RESPONSE
-// /app/myapp/services/hello.js
+# /app/myapp/services/hello.js
 
 console.log("hello")
 END_CODE_RESPONSE
@@ -69,6 +69,7 @@ Ensure that the code is enclosed between the START_CODE_RESPONSE and END_CODE_RE
 
 only write the requested file FILE_PATH
 
+DO NOT EXPLAIN OR WRITE ANYTHING ELSE IN THE RESPONSE, ONLY WRITE THE CODE!
 """
 
 app_files_not_defined ="""
@@ -83,13 +84,13 @@ how_to_write_summary ="""
 Please fill the following template exactly, placing the summary in the <PLACEHOLDER> field, remember to put the file path at the top:
 
 START_SUMMARY
-// FILE_PATH
+# FILE_PATH
 <PLACEHODLER>
 END_SUMMARY
 """
 
 define_update_queue="""
-Create a list of the files that must be created or updated to implement the changes requested by the user: REQUEST_TEXT. 
+Create a list of the files that are relevant to view or that must be created or updated to implement the changes requested by the user: REQUEST_TEXT. 
 Do not list media files. DO NOT ADD ANY COMMENTS.
 
 Use the following response template: 
@@ -121,3 +122,16 @@ END_TASK_FILES
 
 linter_warning_nonsense="(Using Ruby 2.7 parser; configure using TargetRubyVersion parameter, under AllCops)"
 linter_unexpected_end="unexpected token $"
+summary_format="""
+Please place the summary of the code between START_SUMMARY and END_SUMMARY markers. You MUST always format the summary like so. Be brief and succinct.
+
+Example Code: 
+```
+print('Hello World')
+```
+
+Summary:
+START_SUMMARY
+Prints a hello message to the world
+END_SUMMARY
+"""

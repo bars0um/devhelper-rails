@@ -8,6 +8,8 @@ This simple chat script assumes that you have oobabooga or an OpenAI compatible 
 
 The model I found most simple to work with was the [Nous Hermes II](https://huggingface.co/bartowski/Hermes-2-Pro-Llama-3-8B-exl2/tree/8_0), other models might perform as well.
 
+UPDATE: I've found this distillation of [DeepSeek/Qwen](https://huggingface.co/KnutJaegersberg/DeepSeek-R1-Distill-Qwen-14B-exl2-8.0bpw) uploaded by [Knut Jaegersberg](https://huggingface.co/KnutJaegersberg) to be quite good at following instructions.
+
 Important notes:
 
 - to limit the chaos involved I forced temperature to 0
@@ -25,9 +27,18 @@ Important notes:
 
 Usage:
 
+``` 
+python3 -m streamlit run ui.py --server.port=8122 --server.address=0.0.0.0
+```
+
+I've not kept the main project up-to-date so you will need to use the streamlit version if you want to experiment with the latest update.
+
+Old code runs like so:
+
 ```
 python3 -u main.py
 ```
+
 
 ## Starting a new project:
 
@@ -76,6 +87,12 @@ if you add a %file directive as follows the update is expected to revolve around
 
 - Must be run after a resume command is provided first, this will instruct the LLM to diagnose an error by first describing which files it thinks are related to the error. The specified files' contents are loaded and provided to the LLM, after which it is asked to put a plan for fixing the error, and provide a list of files that need to be updated/created to fix the error. After this the logic from the udpate command takes over.
 
+```
+%analyze <folder_path> _appname_
+```
+
+- this assumes a project.md inside hte folder_path that explains what the project is generally about. The analyze workflow starts by making the LLM summarize all the present code in the project. It then proceeds to ask the user for update request. The workflow now follows the same update logic above. The LLM plans out how to achieve the update request, provides a listing of files it will modify and then is fed these step-wise until all proposed file updates are performed. Along the way we re-build the full instruction set to maintain a low token count.
+
 # Docker
 
 The Dockerfile should build an image capable of running this code and starting a rails server...
@@ -90,6 +107,7 @@ stateDiagram-v2
     USER_INPUT --> CREATE
     USER_INPUT --> RESUME
     USER_INPUT --> UPDATE
+    USER_INPUT --> ANALYZE
     CREATE -->  CREATE_INSTRUCTIONS
     CREATE_INSTRUCTIONS --> CREATE_CREATE_INSTRUCTIONS
     CREATE_CREATE_INSTRUCTIONS --> CREATE_SEND_DESCRIPTION_TO_LLM
@@ -142,6 +160,13 @@ stateDiagram-v2
     DIAGNOSE_LOAD_CODE_IN_TASK_RELEVANT_CODE_STORE --> CREATE_INSTRUCTIONS
     CREATE_INSTRUCTIONS --> DIAGNOSE_ASK_LLM_TO_READ_TASK_RELATED_CODE_AND_PROVIDE_UPDATE_PLAN
     DIAGNOSE_ASK_LLM_TO_READ_TASK_RELATED_CODE_AND_PROVIDE_UPDATE_PLAN --> SEND_REQUEST_FOR_UPDATE_PLAN
+    ANALYZE --> ANALYZE_LOAD_APP_FILES
+    ANALYZE_LOAD_APP_FILES --> CREATE_INSTRUCTIONS
+    CREATE_INSTRUCTIONS --> ANALYZE_ASK_LLM_TO_SUMMARIZE_FILE
+    ANALYZE_ASK_LLM_TO_SUMMARIZE_FILE --> SEND_TO_LLM
+    RECEIVE_RESPONSE --> ANALYZE_LLM_SUMMARY_OF_FILE
+    ANALYZE_LLM_SUMMARY_OF_FILE --> ANALYZE_NEXT_FILE_TO_SUMMARIZE
+    ANALYZE_NEXT_FILE_TO_SUMMARIZE --> ANALYZE_ASK_LLM_TO_SUMMARIZE_FILE
 ```
 
 # Further Exploration Plan
@@ -164,3 +189,5 @@ The following are some of the challenges I've noted:
 
 - stop repeated attempts to fix buggy code that don't lead to a successful scan after 3 attempts and give user option to assist the assistant
 - make LLM build test cases and run them to fix bugs earlier
+
+
